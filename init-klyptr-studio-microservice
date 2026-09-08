@@ -1,0 +1,522 @@
+#!/bin/bash
+
+set -e
+
+# ============================================
+# Klyptr Studio Microservice Initializer
+# ============================================
+# This script creates a new microservice from a template
+# Usage: ./init-klyptr-studio-microservice.sh springboot "Payment Service"
+#        ./init-klyptr-studio-microservice.sh nodejs "User Service"
+#        ./init-klyptr-studio-microservice.sh python "Notification Service"
+#        ./init-klyptr-studio-microservice.sh react "Admin Dashboard"
+# Place this script in /Users/dharmaraj/.local/bin/init-klyptr-studio-microservice
+# ============================================
+
+# Color codes
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m'
+
+PROJECT_ROOT="/Users/dharmaraj/Projects/klyptr-studio/"
+GITHUB_ORG="Klyptr-Studio"
+
+# Helper functions
+error() {
+    echo -e "${RED}❌ $1${NC}"
+    exit 1
+}
+
+success() {
+    echo -e "${GREEN}✅ $1${NC}"
+}
+
+info() {
+    echo -e "${YELLOW}👉 $1${NC}"
+}
+
+heading() {
+    echo ""
+    echo -e "${BLUE}========================================"
+    echo "  $1"
+    echo "========================================${NC}"
+    echo ""
+}
+
+cd "$PROJECT_ROOT" || error "Project root does not exist: $PROJECT_ROOT"
+
+# ============================================
+# Validate Input
+# ============================================
+
+if [ -z "$1" ] || [ -z "$2" ]; then
+    echo ""
+    echo "Usage: ./init-klyptr-studio-microservice.sh <tech-stack> \"<Service Name>\""
+    echo ""
+    echo "Supported Tech Stacks:"
+    echo "  springboot          Spring Boot 3 (Java 21) - Backend"
+    echo "  nodejs              Express.js (Node.js) - Backend"
+    echo "  python              FastAPI (Python) - Backend"
+    echo "  react               React + Vite - Frontend"
+    echo ""
+    echo "Examples:"
+    echo "  ./init-klyptr-studio-microservice.sh springboot \"Payment Service\""
+    echo "  ./init-klyptr-studio-microservice.sh nodejs \"User Service\""
+    echo "  ./init-klyptr-studio-microservice.sh python \"Notification Service\""
+    echo "  ./init-klyptr-studio-microservice.sh react \"Admin Dashboard\""
+    echo ""
+    exit 1
+fi
+
+TECH_STACK="$1"
+SERVICE_NAME="$2"
+
+# ============================================
+# Validate Tech Stack
+# ============================================
+
+heading "Validating Tech Stack"
+
+SUPPORTED_STACKS=("springboot" "nodejs" "python" "react")
+if [[ ! " ${SUPPORTED_STACKS[@]} " =~ " ${TECH_STACK} " ]]; then
+    error "Unsupported tech stack: $TECH_STACK"
+fi
+
+TEMPLATE_REPO="template-${TECH_STACK}-microservice"
+info "Tech Stack            : $TECH_STACK"
+info "Template Repository   : $TEMPLATE_REPO"
+
+# ============================================
+# Check Dependencies
+# ============================================
+
+heading "Checking Dependencies"
+
+command -v git >/dev/null 2>&1 || error "Git is not installed."
+success "Git installed"
+
+command -v gh >/dev/null 2>&1 || error "GitHub CLI (gh) is not installed."
+success "GitHub CLI installed"
+
+# Tech-stack specific dependency checks
+case $TECH_STACK in
+    springboot)
+        command -v java >/dev/null 2>&1 || error "Java 21 is not installed."
+        success "Java installed"
+        command -v mvn >/dev/null 2>&1 || error "Maven is not installed."
+        success "Maven installed"
+        ;;
+    nodejs)
+        command -v node >/dev/null 2>&1 || error "Node.js is not installed."
+        success "Node.js installed"
+        command -v npm >/dev/null 2>&1 || error "npm is not installed."
+        success "npm installed"
+        ;;
+    python)
+        command -v python3 >/dev/null 2>&1 || error "Python 3 is not installed."
+        success "Python 3 installed"
+        command -v pip3 >/dev/null 2>&1 || error "pip3 is not installed."
+        success "pip3 installed"
+        ;;
+    react)
+        command -v node >/dev/null 2>&1 || error "Node.js is not installed."
+        success "Node.js installed"
+        command -v npm >/dev/null 2>&1 || error "npm is not installed."
+        success "npm installed"
+        ;;
+esac
+
+# ============================================
+# Convert Service Name to Various Formats
+# ============================================
+
+heading "Converting Service Name"
+
+# Artifact ID: spaces to hyphens, preserve case
+# "Payment Service" → "Payment-Service"
+ARTIFACT_ID=$(echo "$SERVICE_NAME" \
+    | sed -E 's/[^A-Za-z0-9]+/-/g' \
+    | sed -E 's/^-//' \
+    | sed -E 's/-$//')
+
+# Lowercase version for package names
+# "Payment-Service" → "payment-service"
+ARTIFACT_ID_LOWER=$(echo "$ARTIFACT_ID" | tr '[:upper:]' '[:lower:]')
+
+# Package suffix: lowercase, remove hyphens
+# "payment-service" → "paymentservice"
+PACKAGE_SUFFIX=$(echo "$ARTIFACT_ID_LOWER" | tr -d '-')
+
+# Database name
+# "paymentservice" → "payment_service_db"
+DB_NAME="${PACKAGE_SUFFIX}_db"
+
+# Tech-stack specific naming
+case $TECH_STACK in
+    springboot)
+        # Java package: com.klyptr_studio.payment_service
+        PACKAGE_NAME="com.klyptr_studio.${PACKAGE_SUFFIX}"
+        PACKAGE_PATH=$(echo "$PACKAGE_NAME" | tr '.' '/')
+        NPM_NAME=""
+        PYTHON_NAME=""
+        ;;
+    nodejs)
+        # npm scope: @klyptr-studio/payment-service
+        NPM_NAME="@klyptr-studio/${ARTIFACT_ID_LOWER}"
+        PACKAGE_NAME=""
+        PACKAGE_PATH=""
+        PYTHON_NAME=""
+        ;;
+    python)
+        # Python module: klyptr_studio_payment_service
+        PYTHON_NAME="klyptr_studio_${PACKAGE_SUFFIX}"
+        PACKAGE_NAME=""
+        PACKAGE_PATH=""
+        NPM_NAME=""
+        ;;
+    react)
+        # npm scope: @klyptr-studio/admin-dashboard
+        NPM_NAME="@klyptr-studio/${ARTIFACT_ID_LOWER}"
+        PACKAGE_NAME=""
+        PACKAGE_PATH=""
+        PYTHON_NAME=""
+        ;;
+esac
+
+info "Service Name         : $SERVICE_NAME"
+info "Repository Name      : $ARTIFACT_ID"
+info "Tech Stack           : $TECH_STACK"
+[ -n "$PACKAGE_NAME" ] && info "Java Package         : $PACKAGE_NAME"
+[ -n "$NPM_NAME" ] && info "NPM Package          : $NPM_NAME"
+[ -n "$PYTHON_NAME" ] && info "Python Module        : $PYTHON_NAME"
+info "Database Name        : $DB_NAME"
+
+# ============================================
+# Validate Service Doesn't Exist
+# ============================================
+
+heading "Validating Uniqueness"
+
+if [ -d "$ARTIFACT_ID" ]; then
+    error "Directory already exists: $ARTIFACT_ID"
+fi
+
+success "Service name is unique"
+
+# ============================================
+# Check Template Repository Exists
+# ============================================
+
+heading "Verifying Template Repository"
+
+# Check if template repo exists on GitHub
+if gh repo view "Klyptr-Studio/$TEMPLATE_REPO" >/dev/null 2>&1; then
+    success "Template repository found: $TEMPLATE_REPO"
+else
+    error "Template repository not found on GitHub: $TEMPLATE_REPO"
+fi
+
+# ============================================
+# Clone Template Repository
+# ============================================
+
+heading "Cloning Template Repository"
+
+info "Cloning $TEMPLATE_REPO from GitHub..."
+
+# Clone the template repo from GitHub organization
+git clone "https://github.com/Klyptr-Studio/$TEMPLATE_REPO.git" "$ARTIFACT_ID"
+
+success "Template cloned to $ARTIFACT_ID"
+
+# ============================================
+# Navigate to Repository
+# ============================================
+
+cd "$ARTIFACT_ID"
+
+# ============================================
+# Replace Placeholders in All Files
+# ============================================
+
+heading "Customizing Template"
+
+info "Replacing placeholders for $TECH_STACK..."
+
+# Common placeholders for all tech stacks
+PLACEHOLDERS=(
+    "PLACEHOLDER_SERVICE_NAME:$SERVICE_NAME"
+    "PLACEHOLDER_ARTIFACT_ID:$ARTIFACT_ID"
+    "PLACEHOLDER_ARTIFACT_ID_LOWER:$ARTIFACT_ID_LOWER"
+    "PLACEHOLDER_PACKAGE_SUFFIX:$PACKAGE_SUFFIX"
+    "PLACEHOLDER_DB_NAME:$DB_NAME"
+)
+
+# Tech-stack specific placeholders
+case $TECH_STACK in
+    springboot)
+        PLACEHOLDERS+=(
+            "PLACEHOLDER_PACKAGE_NAME:$PACKAGE_NAME"
+            "PLACEHOLDER_PACKAGE_PATH:$PACKAGE_PATH"
+            "PLACEHOLDER:placeholder"
+            "placeholder:$PACKAGE_SUFFIX"
+        )
+        ;;
+    nodejs)
+        PLACEHOLDERS+=(
+            "PLACEHOLDER_NPM_NAME:$NPM_NAME"
+            "PLACEHOLDER:placeholder"
+            "placeholder:$ARTIFACT_ID_LOWER"
+        )
+        ;;
+    python)
+        PLACEHOLDERS+=(
+            "PLACEHOLDER_PYTHON_NAME:$PYTHON_NAME"
+            "PLACEHOLDER:placeholder"
+            "placeholder:$PACKAGE_SUFFIX"
+        )
+        ;;
+    react)
+        PLACEHOLDERS+=(
+            "PLACEHOLDER_NPM_NAME:$NPM_NAME"
+            "PLACEHOLDER:placeholder"
+            "placeholder:$ARTIFACT_ID_LOWER"
+        )
+        ;;
+esac
+
+# Determine file types to replace based on tech stack
+case $TECH_STACK in
+    springboot)
+        FILE_PATTERNS="-name '*.java' -o -name '*.xml' -o -name '*.properties' -o -name '*.yml' -o -name '*.yaml' -o -name '*.md' -o -name '*.sh' -o -name 'Dockerfile' -o -name '.env*'"
+        ;;
+    nodejs|python|react)
+        FILE_PATTERNS="-name '*.js' -o -name '*.jsx' -o -name '*.ts' -o -name '*.tsx' -o -name '*.json' -o -name '*.py' -o -name '*.md' -o -name '*.sh' -o -name 'Dockerfile' -o -name '.env*' -o -name '.eslintrc*' -o -name 'package.json' -o -name 'requirements.txt'"
+        ;;
+esac
+
+# Replace in all text files
+for file in $(find . -type f \( $FILE_PATTERNS \) -not -path "./.git/*" 2>/dev/null); do
+    for placeholder in "${PLACEHOLDERS[@]}"; do
+        KEY="${placeholder%%:*}"
+        VALUE="${placeholder##*:}"
+        # Use printf %s to escape special characters in sed
+        sed -i '' "s|$KEY|$VALUE|g" "$file" 2>/dev/null || true
+    done
+done
+
+success "Placeholders replaced in all files"
+
+# ============================================
+# Restructure Project for Tech Stack
+# ============================================
+
+heading "Restructuring Project"
+
+case $TECH_STACK in
+    springboot)
+        # Java package restructuring
+        if [ -d "src/main/java" ]; then
+            mkdir -p "src/main/java/$PACKAGE_PATH"
+            mkdir -p "src/test/java/$PACKAGE_PATH"
+            
+            if [ -d "src/main/java/com/klyptr_studio/placeholder" ]; then
+                mv src/main/java/com/klyptr_studio/placeholder/* "src/main/java/$PACKAGE_PATH/"
+                rm -rf src/main/java/com/klyptr_studio/placeholder
+            fi
+            
+            if [ -d "src/test/java/com/klyptr_studio/placeholder" ]; then
+                mv src/test/java/com/klyptr_studio/placeholder/* "src/test/java/$PACKAGE_PATH/"
+                rm -rf src/test/java/com/klyptr_studio/placeholder
+            fi
+            
+            # Rename main application class
+            if [ -f "src/main/java/$PACKAGE_PATH/PlaceholderServiceApplication.java" ]; then
+                CLASS_NAME="$(echo ${ARTIFACT_ID} | sed -E 's/-([a-z])/\U\1/g' | sed 's/^./\U&/')ServiceApplication"
+                mv "src/main/java/$PACKAGE_PATH/PlaceholderServiceApplication.java" "src/main/java/$PACKAGE_PATH/${CLASS_NAME}.java"
+                sed -i '' "s/PlaceholderServiceApplication/$CLASS_NAME/g" "src/main/java/$PACKAGE_PATH/${CLASS_NAME}.java"
+            fi
+            
+            success "Java package structure reorganized"
+        fi
+        ;;
+    nodejs)
+        # Node.js restructuring (if needed)
+        if [ -f "package.json" ]; then
+            # package.json should already have correct name from placeholder replacement
+            success "Node.js project structure verified"
+        fi
+        ;;
+    python)
+        # Python restructuring (if needed)
+        if [ -d "src" ]; then
+            # Python project structure already organized
+            success "Python project structure verified"
+        fi
+        ;;
+    react)
+        # React restructuring (if needed)
+        if [ -f "package.json" ]; then
+            # package.json should already have correct name from placeholder replacement
+            success "React project structure verified"
+        fi
+        ;;
+esac
+
+# ============================================
+# Update .env file
+# ============================================
+
+heading "Configuring Environment"
+
+if [ -f ".env.example" ]; then
+    cp ".env.example" ".env"
+    sed -i '' "s/PLACEHOLDER_DB_NAME/$DB_NAME/g" ".env"
+    success ".env file created"
+fi
+
+# ============================================
+# Initialize Git Repository
+# ============================================
+
+heading "Initializing Git Repository"
+
+# Remove old git remote
+git remote remove origin
+
+# Create new local repository
+git add .
+git commit -m "Initial commit: Template customized for $SERVICE_NAME"
+
+success "Local git repository initialized"
+
+# ============================================
+# Create GitHub Repository
+# ============================================
+
+heading "Creating GitHub Repository"
+
+info "Creating remote repository on GitHub..."
+
+gh repo create "$GITHUB_ORG/$ARTIFACT_ID" \
+    --private \
+    --source=. \
+    --push \
+    --remote=origin
+
+success "GitHub repository created and code pushed"
+
+# ============================================
+# Create Develop Branch
+# ============================================
+
+heading "Setting Up Branches"
+
+git checkout -b develop
+git push -u origin develop
+
+success "Develop branch created and pushed"
+
+# ============================================
+# Set Repository Description
+# ============================================
+
+info "Setting repository metadata..."
+
+gh repo edit "$GITHUB_ORG/$ARTIFACT_ID" \
+    --description "Klyptr Studio: $SERVICE_NAME microservice"
+
+# ============================================
+# Display Summary
+# ============================================
+
+heading "🎉 Microservice Created Successfully!"
+
+echo "Service Details:"
+echo "  Name              : $SERVICE_NAME"
+echo "  Repository        : $ARTIFACT_ID"
+echo "  Tech Stack        : $TECH_STACK"
+[ -n "$PACKAGE_NAME" ] && echo "  Java Package      : $PACKAGE_NAME"
+[ -n "$NPM_NAME" ] && echo "  NPM Package       : $NPM_NAME"
+[ -n "$PYTHON_NAME" ] && echo "  Python Module     : $PYTHON_NAME"
+echo "  Database          : $DB_NAME"
+echo ""
+
+echo "Directory Structure:"
+echo "  Location          : $(pwd)/$ARTIFACT_ID"
+case $TECH_STACK in
+    springboot)
+        echo "  Main Classes      : src/main/java/$PACKAGE_PATH"
+        echo "  Tests             : src/test/java/$PACKAGE_PATH"
+        ;;
+    nodejs|python)
+        echo "  Source            : src/"
+        echo "  Tests             : tests/ or __tests__/"
+        ;;
+    react)
+        echo "  Source            : src/"
+        echo "  Components        : src/components/"
+        echo "  Tests             : src/__tests__/"
+        ;;
+esac
+echo ""
+
+echo "GitHub:"
+echo "  Repository URL    : https://github.com/Klyptr-Studio/$ARTIFACT_ID"
+echo "  Main Branch       : main"
+echo "  Develop Branch    : develop"
+echo ""
+
+echo "Next Steps:"
+echo "  1. cd $ARTIFACT_ID"
+case $TECH_STACK in
+    springboot)
+        echo "  2. ./setup.sh                    (Set up local development)"
+        echo "  3. mvn spring-boot:run           (Run the application)"
+        ;;
+    nodejs)
+        echo "  2. npm install                   (Install dependencies)"
+        echo "  3. npm run dev                   (Run development server)"
+        ;;
+    python)
+        echo "  2. pip install -r requirements.txt (Install dependencies)"
+        echo "  3. uvicorn main:app --reload    (Run development server)"
+        ;;
+    react)
+        echo "  2. npm install                   (Install dependencies)"
+        echo "  3. npm run dev                   (Run development server)"
+        ;;
+esac
+echo ""
+
+echo "Development Workflow:"
+echo "  1. Create feature branches: git checkout -b feature/xyz"
+echo "  2. Make changes and commit"
+echo "  3. Push to GitHub: git push origin feature/xyz"
+echo "  4. Create Pull Request for code review"
+echo "  5. Merge to develop after review"
+echo ""
+
+echo "Documentation:"
+case $TECH_STACK in
+    springboot)
+        echo "  - Setup Guide      : docs/SETUP.md"
+        echo "  - API Docs         : docs/API.md"
+        echo "  - Architecture     : docs/ARCHITECTURE.md"
+        echo "  - AI Instructions  : CLAUDE.md"
+        ;;
+    *)
+        echo "  - README           : README.md"
+        echo "  - Setup Guide      : SETUP.md (if included)"
+        echo "  - AI Instructions  : CLAUDE.md (if included)"
+        ;;
+esac
+echo ""
+
+info "Opening repository in GitHub..."
+cd ..
+gh repo view "$GITHUB_ORG/$ARTIFACT_ID" --web
+
+echo ""
