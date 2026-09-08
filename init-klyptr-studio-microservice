@@ -290,22 +290,22 @@ esac
 # Determine file types to replace based on tech stack
 case $TECH_STACK in
     springboot)
-        FILE_PATTERNS="-name '*.java' -o -name '*.xml' -o -name '*.properties' -o -name '*.yml' -o -name '*.yaml' -o -name '*.md' -o -name '*.sh' -o -name 'Dockerfile' -o -name '.env*'"
+        FILE_PATTERNS=(-name "*.java" -o -name "*.xml" -o -name "*.properties" -o -name "*.yml" -o -name "*.yaml" -o -name "*.md" -o -name "*.sh" -o -name "Dockerfile" -o -name ".env*")
         ;;
     nodejs|python|react)
-        FILE_PATTERNS="-name '*.js' -o -name '*.jsx' -o -name '*.ts' -o -name '*.tsx' -o -name '*.json' -o -name '*.py' -o -name '*.md' -o -name '*.sh' -o -name 'Dockerfile' -o -name '.env*' -o -name '.eslintrc*' -o -name 'package.json' -o -name 'requirements.txt'"
+        FILE_PATTERNS=(-name "*.js" -o -name "*.jsx" -o -name "*.ts" -o -name "*.tsx" -o -name "*.json" -o -name "*.py" -o -name "*.md" -o -name "*.sh" -o -name "Dockerfile" -o -name ".env*" -o -name ".eslintrc*" -o -name "package.json" -o -name "requirements.txt")
         ;;
 esac
 
 # Replace in all text files
-for file in $(find . -type f \( $FILE_PATTERNS \) -not -path "./.git/*" 2>/dev/null); do
+while IFS= read -r file; do
     for placeholder in "${PLACEHOLDERS[@]}"; do
         KEY="${placeholder%%:*}"
         VALUE="${placeholder##*:}"
         # Use printf %s to escape special characters in sed
         sed -i '' "s|$KEY|$VALUE|g" "$file" 2>/dev/null || true
     done
-done
+done < <(find . -type f \( "${FILE_PATTERNS[@]}" \) -not -path "./.git/*")
 
 success "Placeholders replaced in all files"
 
@@ -388,7 +388,9 @@ git remote remove origin
 
 # Create new local repository
 git add .
-git commit -m "Initial commit: Template customized for $SERVICE_NAME"
+if ! git diff-index --quiet HEAD --; then
+    git commit -m "Initial commit: Template customized for $SERVICE_NAME"
+fi
 
 success "Local git repository initialized"
 
