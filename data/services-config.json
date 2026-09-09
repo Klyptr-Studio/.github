@@ -1,0 +1,217 @@
+{
+    "organization": "Klyptr-Studio",
+    "labels": [
+        {
+            "name": "phase-1",
+            "description": "Phase 1: MVP Development (Weeks 1-4)",
+            "color": "1f883d"
+        },
+        {
+            "name": "phase-2",
+            "description": "Phase 2: Polish & Launch (Weeks 5-8)",
+            "color": "0366d6"
+        },
+        {
+            "name": "phase-3",
+            "description": "Phase 3: Growth & Scale (Weeks 9-12+)",
+            "color": "6f42c1"
+        },
+        {
+            "name": "type:setup",
+            "description": "Initial setup/scaffolding work",
+            "color": "d4c5f9"
+        },
+        {
+            "name": "type:feature",
+            "description": "Feature development work",
+            "color": "bfdadc"
+        },
+        {
+            "name": "type:documentation",
+            "description": "Documentation & guides",
+            "color": "ffd3b6"
+        },
+        {
+            "name": "type:testing",
+            "description": "Testing & QA work",
+            "color": "a2eeef"
+        },
+        {
+            "name": "type:devops",
+            "description": "Deployment & infrastructure work",
+            "color": "fbca04"
+        },
+        {
+            "name": "priority:high",
+            "description": "Blocking/critical tasks",
+            "color": "d73a49"
+        },
+        {
+            "name": "priority:medium",
+            "description": "Important but not blocking",
+            "color": "ffa500"
+        }
+    ],
+    "services": [
+        {
+            "name": "User Service",
+            "techStack": "springboot",
+            "repository": "User-Service",
+            "phase": "phase-1",
+            "issues": [
+                {
+                    "title": "Setup Spring Boot 3.2 project with security & Redis",
+                    "description": "- Initialize Maven project structure with Java 21\n- Configure application.properties for PostgreSQL & Redis\n- Add Spring Security, JWT, Lombok, and H2 test database dependencies\n- Setup Dockerfile and docker-compose.yml with PostgreSQL replica\n- Create CLAUDE.md with development instructions",
+                    "type": "type:setup",
+                    "priority": "priority:high"
+                },
+                {
+                    "title": "Implement JWT authentication & user management endpoints",
+                    "description": "- Create User entity with JPA annotations (Lombok)\n- Implement UserService with registration & login logic\n- Setup JWT token generation & validation filters\n- Create REST endpoints: POST /api/users/register, POST /api/users/login\n- Add unit tests with Mockito\n- Document API in Swagger/OpenAPI",
+                    "type": "type:feature",
+                    "priority": "priority:high"
+                }
+            ]
+        },
+        {
+            "name": "Subscription Service",
+            "techStack": "python",
+            "repository": "Subscription-Service",
+            "phase": "phase-1",
+            "issues": [
+                {
+                    "title": "Setup FastAPI project with PostgreSQL & Redis integration",
+                    "description": "- Create FastAPI project structure with async support\n- Configure SQLAlchemy ORM for PostgreSQL connection\n- Setup Redis cache client for quota tracking\n- Add Pydantic models for request/response validation\n- Setup testing with pytest and fixtures\n- Create Dockerfile and docker-compose.yml",
+                    "type": "type:setup",
+                    "priority": "priority:high"
+                },
+                {
+                    "title": "Implement subscription tier management & quota enforcement",
+                    "description": "- Create Subscription database models (Free, Pro, Enterprise tiers)\n- Implement usage tracking endpoints: GET /api/subscriptions/{userId}/usage\n- Create quota validation middleware to block overages\n- Implement tier upgrade/downgrade endpoints\n- Setup Stripe webhook handler for payment events\n- Add logging for usage tracking",
+                    "type": "type:feature",
+                    "priority": "priority:high"
+                }
+            ]
+        },
+        {
+            "name": "Script Service",
+            "techStack": "nodejs",
+            "repository": "Script-Service",
+            "phase": "phase-1",
+            "issues": [
+                {
+                    "title": "Setup Express.js with TypeScript & OpenAI integration",
+                    "description": "- Initialize Node.js project with TypeScript configuration\n- Setup Express.js with async/await error handling middleware\n- Configure environment variables for OpenAI API key\n- Add request validation with Joi/Zod\n- Setup Winston logging with structured logs\n- Create Dockerfile and docker-compose.yml",
+                    "type": "type:setup",
+                    "priority": "priority:high"
+                },
+                {
+                    "title": "Integrate OpenAI API & implement prompt engineering",
+                    "description": "- Create script generation endpoint: POST /api/scripts/generate\n- Implement prompt templates for different tones (beginner, professional, casual)\n- Add multi-language support in prompts (detect from request)\n- Implement response parsing & validation\n- Add caching layer with Redis (TTL: 2 hours)\n- Create unit tests for prompt templates\n- Add Kafka producer to publish 'script.generated' events",
+                    "type": "type:feature",
+                    "priority": "priority:high"
+                }
+            ]
+        },
+        {
+            "name": "Voice Service",
+            "techStack": "python",
+            "repository": "Voice-Service",
+            "phase": "phase-1",
+            "issues": [
+                {
+                    "title": "Setup FastAPI project with ElevenLabs & voice processing",
+                    "description": "- Create FastAPI project with async task support\n- Integrate ElevenLabs API client for TTS\n- Setup voice cloning infrastructure (GPT-SoVITS)\n- Create PostgreSQL models for voice storage & metadata\n- Setup Redis cache for voice library\n- Configure file storage for generated audio files\n- Create Dockerfile and docker-compose.yml",
+                    "type": "type:setup",
+                    "priority": "priority:high"
+                },
+                {
+                    "title": "Implement TTS & voice cloning with quality scoring",
+                    "description": "- Create voice generation endpoint: POST /api/voice/generate\n- Implement ElevenLabs TTS with accent/speed control\n- Implement voice cloning with GPT-SoVITS (if user provides sample)\n- Add voice quality scoring (MOS - Mean Opinion Score)\n- Create Redis caching for generated voices (TTL: 2 hours)\n- Implement Kafka consumer to listen for 'script.generated' events\n- Add publish to 'voice.generated' event on completion",
+                    "type": "type:feature",
+                    "priority": "priority:high"
+                }
+            ]
+        },
+        {
+            "name": "Media Service",
+            "techStack": "nodejs",
+            "repository": "Media-Service",
+            "phase": "phase-1",
+            "issues": [
+                {
+                    "title": "Setup Express.js with media processing & API integrations",
+                    "description": "- Initialize Node.js project with TypeScript configuration\n- Setup FFmpeg for video/image processing utilities\n- Configure Runway ML API client for image upscaling\n- Setup stock footage API clients (Pexels/Pixabay)\n- Create PostgreSQL models for media suggestions & metadata\n- Setup Redis cache for suggestion results\n- Create Dockerfile and docker-compose.yml",
+                    "type": "type:setup",
+                    "priority": "priority:high"
+                },
+                {
+                    "title": "Implement B-roll suggestions & image generation",
+                    "description": "- Create media suggestion endpoint: POST /api/media/suggest\n- Implement contextual B-roll recommendation algorithm\n- Integrate Runway ML API for image upscaling/enhancement\n- Integrate stock footage APIs for video clip retrieval\n- Add Redis caching for suggestions (TTL: 3 hours)\n- Implement Kafka consumer to listen for 'voice.generated' events\n- Add publish to 'media.ready' event with suggestions payload",
+                    "type": "type:feature",
+                    "priority": "priority:high"
+                }
+            ]
+        },
+        {
+            "name": "Asset Manager",
+            "techStack": "springboot",
+            "repository": "Asset-Manager",
+            "phase": "phase-1",
+            "issues": [
+                {
+                    "title": "Setup Spring Boot with AWS S3 & asset versioning",
+                    "description": "- Initialize Spring Boot 3.2 project with Maven\n- Configure AWS S3 SDK for object storage integration\n- Setup PostgreSQL models for asset metadata & versioning\n- Create S3 bucket configuration (versioning, lifecycle policies)\n- Setup Dockerfile with multi-stage build\n- Create docker-compose.yml with PostgreSQL & Redis",
+                    "type": "type:setup",
+                    "priority": "priority:high"
+                },
+                {
+                    "title": "Implement asset compilation & export management",
+                    "description": "- Create asset compilation endpoint: POST /api/assets/compile\n- Implement asset assembly (script + voice + media + captions)\n- Add multi-format export support (MP4, WebM, GIF)\n- Implement S3 presigned URL generation for downloads\n- Add versioning & rollback capability\n- Implement Kafka consumer to listen for 'media.ready' events\n- Publish to 'asset.compiled' event on completion",
+                    "type": "type:feature",
+                    "priority": "priority:high"
+                }
+            ]
+        },
+        {
+            "name": "Analytics Service",
+            "techStack": "python",
+            "repository": "Analytics-Service",
+            "phase": "phase-2",
+            "issues": [
+                {
+                    "title": "Setup FastAPI with TimescaleDB & metric aggregation",
+                    "description": "- Create FastAPI project with async support\n- Integrate TimescaleDB for time-series data storage\n- Setup Kafka consumer client for event streaming\n- Create database hypertables for metrics storage\n- Configure continuous aggregates for hourly/daily rollups\n- Setup Redis for real-time metric caching\n- Create Dockerfile and docker-compose.yml",
+                    "type": "type:setup",
+                    "priority": "priority:high"
+                },
+                {
+                    "title": "Implement event tracking & analytics dashboards",
+                    "description": "- Create metrics endpoints: GET /api/analytics/metrics, GET /api/analytics/dashboard\n- Implement Kafka consumer to listen for all service events\n- Store events in TimescaleDB with proper tagging\n- Create aggregations for user activity, generation latency, voice quality\n- Implement real-time metric caching in Redis\n- Add API for retrieving user-specific analytics\n- Create unit tests for metric calculations",
+                    "type": "type:feature",
+                    "priority": "priority:medium"
+                }
+            ]
+        },
+        {
+            "name": "Notification Service",
+            "techStack": "nodejs",
+            "repository": "Notification-Service",
+            "phase": "phase-1",
+            "issues": [
+                {
+                    "title": "Setup Express.js with Bull queue & email integration",
+                    "description": "- Initialize Node.js project with TypeScript configuration\n- Setup Bull queue for job scheduling (backed by Redis)\n- Configure SendGrid API for email delivery\n- Create PostgreSQL models for notification tracking\n- Setup Kafka consumer for event listening\n- Implement email templates (Handlebars)\n- Create Dockerfile and docker-compose.yml",
+                    "type": "type:setup",
+                    "priority": "priority:high"
+                },
+                {
+                    "title": "Implement event-driven notifications & webhooks",
+                    "description": "- Create notification endpoint: POST /api/notifications/send\n- Implement Kafka consumer to listen for 'asset.compiled' events\n- Queue emails via Bull with retry logic (exponential backoff)\n- Integrate SendGrid for reliable email delivery\n- Implement webhook event delivery for completed videos\n- Add notification status tracking & delivery logs\n- Create unit tests for queue processing",
+                    "type": "type:feature",
+                    "priority": "priority:high"
+                }
+            ]
+        }
+    ]
+}
