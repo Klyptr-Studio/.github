@@ -39,7 +39,6 @@ Klyptr Studio is architected around an **event-driven choreography pattern** pow
 <img src="./.assets/DataFlow.png" />
 
 <br />
-<br/>
 
 ## Microservices Ecosystem
 
@@ -75,6 +74,14 @@ flowchart LR
 
 <br />
 
+---
+
+## Contributing
+
+Repositories are currently private, but I am actively seeking collaborators to help build Klyptr Studio. If you would like to contribute for Klyptr Studio, please reach out to me via [LinkedIn](https://www.linkedin.com/in/dharmaraj-rathinavel/). 
+
+![](./.assets/Banner.png)
+
 <div align="center">
-  <sub>Built with ❤️ by <b><a href="https://dharmaraj-rathinavel.work/">Dharmaraj</a></b></sub>
+  <p>Built with ❤️ by <b><a href="https://dharmaraj-rathinavel.work/">Dharmaraj</a></b></p>
 </div>
