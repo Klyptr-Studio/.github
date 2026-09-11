@@ -80,47 +80,89 @@ Creators enjoy full hybrid flexibility:
 
 Klyptr Studio is architected around an **event-driven choreography pattern** powered by **Apache Kafka**, with high-performance edge routing via **Kong API Gateway** and a unified multi-tier caching layer (Redis L2 + PostgreSQL persistent storage).
 
-```
-                      ┌─────────────────────────────────┐
-                      │    Client (React 18 + Vite)     │
-                      └────────────────┬────────────────┘
-                                       │ HTTPS / WSS
-                                       ▼
-                      ┌─────────────────────────────────┐
-                      │        Kong API Gateway         │
-                      └────────┬───────────────┬────────┘
-                               │               │
-            ┌──────────────────┘               └──────────────────┐
-            ▼                                                     ▼
-┌────────────────────────┐                             ┌────────────────────────┐
-│      User Service      │◄───[ Redis Session Cache ]──►│  Subscription Service  │
-│  (Spring Boot 3 / JPA) │                             │   (FastAPI / Stripe)   │
-└───────────┬────────────┘                             └────────────────────────┘
-            │
-            │  Produces: "script.requested"
-            ▼
-┌───────────────────────────────────────────────────────────────────────────────┐
-│                          Apache Kafka Event Bus                               │
-└──────┬──────────────────────┬──────────────────────┬───────────────────┬──────┘
-       │                      │                      │                   │
-       ▼                      ▼                      ▼                   ▼
-┌──────────────┐       ┌──────────────┐       ┌──────────────┐    ┌──────────────┐
-│Script Service│       │Voice Service │       │Media Service │    │Notification  │
-│(Node / OpenAI│       │ (FastAPI /   │       │(Node / Runway│    │(Node / Bull /│
-│  / LangChain)│       │  ElevenLabs) │       │  / FFmpeg)   │    │  SendGrid)   │
-└──────┬───────┘       └──────┬───────┘       └──────┬───────┘    └──────────────┘
-       │                      │                      │
-       │ "script.generated"   │ "voice.generated"    │ "media.ready"
-       └──────────────────────┼──────────────────────┘
-                              │
-                              ▼
-               ┌──────────────────────────────┐
-               │        Asset Manager         │
-               │  (Spring Boot 3 / AWS S3)    │
-               └──────────────┬───────────────┘
-                              │
-                              ▼ Presigned URLs & CDN
-                     📦 Compiled Video Pack
+```mermaid
+flowchart TD
+    subgraph ClientLayer["🌐 Client Layer"]
+        Client["React 18 + Vite Web App<br/>(TypeScript & Tailwind CSS)"]
+    end
+
+    subgraph EdgeLayer["🛡️ Ingress & Edge Gateway"]
+        Gateway["Kong API Gateway<br/>(JWT Auth, Rate Limiting & SSL)"]
+    end
+
+    subgraph CoreServices["⚙️ Synchronous Core Services"]
+        UserService["User Service<br/>(Java 21 / Spring Boot 3)"]
+        SubService["Subscription Service<br/>(Python 3.11 / FastAPI)"]
+        RedisSession[("Redis Cache<br/>(User Sessions & Quotas)")]
+    end
+
+    subgraph EventMesh["⚡ Event Streaming Backbone"]
+        Kafka{{"Apache Kafka Event Bus<br/>(Distributed Event Topics)"}}
+    end
+
+    subgraph PipelineServices["🎬 Asynchronous Content Generation Pipeline"]
+        ScriptService["Script Service<br/>(Node.js / TypeScript / OpenAI)"]
+        VoiceService["Voice Service<br/>(Python / FastAPI / ElevenLabs)"]
+        MediaService["Media Service<br/>(Node.js / TypeScript / Runway / FFmpeg)"]
+        NotifyService["Notification Service<br/>(Node.js / TypeScript / Bull Queue)"]
+    end
+
+    subgraph StorageDelivery["📦 Storage, Assembly & Delivery"]
+        AssetManager["Asset Manager<br/>(Java 21 / Spring Boot 3)"]
+        PostgresDB[("PostgreSQL 15<br/>(Persistent Relational Data)")]
+        RedisL2[("Redis 7 L2 Cache<br/>(Sub-50ms Read Layer)")]
+        S3Storage[("AWS S3 Object Storage<br/>(Versioned Media & Signed URLs)")]
+        VideoPack["📦 Studio-Grade Video Pack<br/>(Script + Voice + B-Roll + Captions)"]
+    end
+
+    %% Client Ingress
+    Client -->|"HTTPS / WSS"| Gateway
+    Gateway -->|"Route: /api/users"| UserService
+    Gateway -->|"Route: /api/subscriptions"| SubService
+    Gateway -->|"Route: /api/assets"| AssetManager
+
+    %% Sync State Management
+    UserService <--> RedisSession
+    SubService <--> RedisSession
+    UserService -->|"Emit: script.requested"| Kafka
+
+    %% Asynchronous Choreography Pipeline
+    Kafka -->|"Consume: script.requested"| ScriptService
+    ScriptService -->|"Emit: script.generated"| Kafka
+
+    Kafka -->|"Consume: script.generated"| VoiceService
+    VoiceService -->|"Emit: voice.generated"| Kafka
+
+    Kafka -->|"Consume: voice.generated"| MediaService
+    MediaService -->|"Emit: media.ready"| Kafka
+
+    Kafka -->|"Consume: media.ready"| AssetManager
+    AssetManager -->|"Emit: asset.compiled"| Kafka
+    Kafka -->|"Consume: asset.compiled"| NotifyService
+
+    %% Persistence & Delivery
+    AssetManager <--> PostgresDB
+    AssetManager <--> RedisL2
+    AssetManager -->|"Persist Media & Generate Signed URLs"| S3Storage
+    S3Storage --> VideoPack
+    VideoPack -.->|"Direct Secure Download"| Client
+
+    %% Visual Styling
+    classDef client fill:#eef2ff,stroke:#6366f1,stroke-width:2px;
+    classDef edge fill:#f0fdfa,stroke:#0d9488,stroke-width:2px;
+    classDef sync fill:#fdf4ff,stroke:#c026d3,stroke-width:2px;
+    classDef kafka fill:#fff7ed,stroke:#ea580c,stroke-width:3px;
+    classDef worker fill:#eff6ff,stroke:#2563eb,stroke-width:2px;
+    classDef storage fill:#f0fdf4,stroke:#16a34a,stroke-width:2px;
+    classDef pack fill:#fefce8,stroke:#ca8a04,stroke-width:2px;
+
+    class Client client;
+    class Gateway edge;
+    class UserService,SubService,RedisSession sync;
+    class Kafka kafka;
+    class ScriptService,VoiceService,MediaService,NotifyService worker;
+    class AssetManager,PostgresDB,RedisL2,S3Storage storage;
+    class VideoPack pack;
 ```
 
 <div align="center">
@@ -131,10 +173,29 @@ Klyptr Studio is architected around an **event-driven choreography pattern** pow
 
 <br/>
 
-### Key Architectural Characteristics
-- **Choreographed Event Pipeline:** Decoupled asynchronous workers communicate via strict Kafka event schemas (`script.generated`, `voice.generated`, `media.ready`, `asset.compiled`).
-- **Two-Tier Resilient Caching:** Deterministic Redis cache invalidation keys (`script:{userId}`, `voice:{voiceId}`, `media:suggestions:{topicId}`) guarantee sub-50ms API read operations.
-- **Enterprise Object Storage:** Versioned AWS S3 buckets with signed pre-authenticated URLs ensure secure, ephemeral direct client downloads.
+### 🔄 Data Flow Lifecycle
+
+#### ✍️ Write Path (Autonomous Generation)
+1. **User Request:** Creator submits project parameters (topic, language, tone, voice preferences) via the **React 18 Web Studio**.
+2. **Auth & Quotas:** **Kong API Gateway** routes to **User Service** for JWT verification and **Subscription Service** for real-time quota validation.
+3. **Event Ingestion:** **User Service** writes job metadata to PostgreSQL and publishes `script.requested` to the **Apache Kafka Event Bus**.
+4. **Script Generation:** **Script Service** consumes the event, invokes OpenAI with custom tone templates, stores the script, invalidates `script:{userId}` cache, and emits `script.generated`.
+5. **Voice Synthesis:** **Voice Service** consumes `script.generated`, synthesizes audio via ElevenLabs or GPT-SoVITS (MOS > 4.0), caches the audio vector, and emits `voice.generated`.
+6. **Media Intelligence:** **Media Service** consumes `voice.generated`, ranks contextual B-roll clips and AI imagery via Runway ML & stock footage APIs, and emits `media.ready`.
+7. **Asset Assembly:** **Asset Manager** downloads media parts, encodes timeline assets, uploads to AWS S3, and emits `asset.compiled`.
+8. **Notification:** **Notification Service** consumes `asset.compiled` and triggers real-time UI webhooks and email notifications.
+
+#### 📖 Read Path (Sub-50ms Delivery)
+1. Client requests project assets via `GET /api/assets/{projectId}`.
+2. **Kong API Gateway** routes directly to **Asset Manager**.
+3. **Asset Manager** performs an L2 cache lookup:
+   - **Cache Hit:** Returns cached metadata and pre-signed S3 URLs immediately.
+   - **Cache Miss:** Reads from PostgreSQL, repopulates Redis with a 2-hour TTL, and generates secure, pre-signed AWS S3 download URLs.
+
+#### ⚡ Cache Invalidation Strategy
+- **Script Changes:** Invalidate `script:{userId}` and `script:{projectId}`.
+- **Voice Changes:** Invalidate `voice:{voiceId}` and audio cache vectors.
+- **Media Suggestions:** Invalidate `media:suggestions:{topicId}`.
 
 ---
 
