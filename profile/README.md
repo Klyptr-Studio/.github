@@ -78,7 +78,7 @@ flowchart LR
 
 ## Contributing
 
-Repositories are currently private, but I am actively seeking collaborators to help build Klyptr Studio. If you would like to contribute for Klyptr Studio, please reach out to me via [LinkedIn](https://www.linkedin.com/in/dharmaraj-rathinavel/). 
+Repositories are currently private, but I am actively seeking collaborators to help build Klyptr Studio. If you would like to contribute for Klyptr Studio, please reach out to me via [LinkedIn](https://www.linkedin.com/in/dharmarajrathinavel/). 
 
 ![](./.assets/Banner.png)
 
