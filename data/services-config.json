@@ -50,6 +50,11 @@
             "name": "priority:medium",
             "description": "Important but not blocking",
             "color": "ffa500"
+        },
+        {
+            "name": "priority:low",
+            "description": "Nice to have/non-blocking",
+            "color": "0e8a16"
         }
     ],
     "services": [
@@ -60,16 +65,46 @@
             "phase": "phase-1",
             "issues": [
                 {
-                    "title": "Setup Spring Boot 3.2 project with security & Redis",
-                    "description": "- Initialize Maven project structure with Java 21\n- Configure application.properties for PostgreSQL & Redis\n- Add Spring Security, JWT, Lombok, and H2 test database dependencies\n- Setup Dockerfile and docker-compose.yml with PostgreSQL replica\n- Create CLAUDE.md with development instructions",
+                    "title": "Configure Spring Boot 3.2 scaffolding, Docker multi-stage build & CI workflow",
+                    "description": "### Context & Objective\nSetup the foundational build, packaging, and CI pipelines for User-Service to ensure clean local and containerized development using Java 21 and Spring Boot 3.2.\n\n### Technical Tasks\n- [ ] Configure `pom.xml` with dependencies for Spring Boot 3.2, Spring Security, Spring Data JPA, Spring Data Redis, Lombok, and Flyway\n- [ ] Setup multi-environment configuration: `application.properties`, `application-test.properties`, and `application-prod.properties`\n- [ ] Create multi-stage `Dockerfile` (build layer with Maven cache + distroless/temurin runtime)\n- [ ] Configure `docker-compose.yml` with PostgreSQL 15 and Redis 7 services including healthchecks\n- [ ] Create GitHub Actions workflow (`.github/workflows/ci.yml`) to run `mvn clean verify` on push and PR\n\n### Acceptance Criteria\n- [ ] Application compiles and boots cleanly via `mvn spring-boot:run`\n- [ ] `docker compose up` spins up User-Service, PostgreSQL, and Redis with healthy container status\n- [ ] Spring Actuator `/actuator/health` returns HTTP 200 `{\"status\":\"UP\"}`\n\n### Dependencies & Technical Notes\n- Java 21, Spring Boot 3.2, PostgreSQL 15, Redis 7\n- Estimated Effort: 1.5 - 2 days",
                     "type": "type:setup",
-                    "priority": "priority:high"
+                    "priority": "priority:high",
+                    "phase": "phase-1"
                 },
                 {
-                    "title": "Implement JWT authentication & user management endpoints",
-                    "description": "- Create User entity with JPA annotations (Lombok)\n- Implement UserService with registration & login logic\n- Setup JWT token generation & validation filters\n- Create REST endpoints: POST /api/users/register, POST /api/users/login\n- Add unit tests with Mockito\n- Document API in Swagger/OpenAPI",
+                    "title": "Implement Flyway migrations, JPA entities & repositories for users and profiles",
+                    "description": "### Context & Objective\nEstablish persistent domain models for user accounts, creator profiles, and audit records with strict database constraints and automated migrations.\n\n### Technical Tasks\n- [ ] Setup Flyway migration `V1__init_users_schema.sql` defining `users`, `user_profiles`, `user_consents`, and `audit_logs` tables\n- [ ] Implement JPA entity `User` with Lombok annotations (`@Data`, `@Builder`, `@NoArgsConstructor`, `@AllArgsConstructor`)\n- [ ] Implement JPA entity `UserProfile` with fields: `creator_style`, `default_language`, `default_tone`, `bio`\n- [ ] Implement JPA auditing with `@CreatedDate` and `@LastModifiedDate` on all entities\n- [ ] Create `UserRepository` and `UserProfileRepository` extending `JpaRepository` with custom lookup methods\n\n### Acceptance Criteria\n- [ ] Flyway runs migrations cleanly on boot without errors\n- [ ] JPA entities enforce unique constraints (e.g. `email` unique) and foreign key relationships\n- [ ] Repository unit tests pass with in-memory H2 / test database\n\n### Dependencies & Technical Notes\n- Follow Repository pattern specified in CLAUDE.md\n- Estimated Effort: 2 days",
                     "type": "type:feature",
-                    "priority": "priority:high"
+                    "priority": "priority:high",
+                    "phase": "phase-1"
+                },
+                {
+                    "title": "Implement Spring Security 6, JWT provider & Redis token revocation blocklist",
+                    "description": "### Context & Objective\nImplement stateless authentication with JWT tokens (access and refresh tokens) and Redis-backed session revocation to satisfy secure access and instant logout requirements.\n\n### Technical Tasks\n- [ ] Configure Spring Security 6 `SecurityFilterChain` with stateless session management and CORS/CSRF configurations\n- [ ] Implement `JwtTokenProvider` generating signed JWT access tokens (15m TTL) and refresh tokens (7d TTL)\n- [ ] Implement `JwtAuthenticationFilter` to validate Bearer tokens on incoming requests and set `SecurityContext`\n- [ ] Configure `BCryptPasswordEncoder` (strength 12) for secure credential hashing\n- [ ] Integrate Redis token blocklist: store revoked tokens with TTL on logout to instantly reject compromised or logged-out tokens\n\n### Acceptance Criteria\n- [ ] Requests to protected endpoints without valid Bearer token return HTTP 401 Unauthorized\n- [ ] Authenticated requests with valid JWT succeed and populate user identity in `SecurityContextHolder`\n- [ ] Logging out adds token to Redis blocklist; subsequent calls with that token fail immediately with HTTP 401\n\n### Dependencies & Technical Notes\n- Integrates with Redis 7\n- Estimated Effort: 2 - 2.5 days",
+                    "type": "type:feature",
+                    "priority": "priority:high",
+                    "phase": "phase-1"
+                },
+                {
+                    "title": "Implement user authentication, registration & profile management REST APIs",
+                    "description": "### Context & Objective\nProvide user-facing REST endpoints for account registration, credential authentication, token rotation, and profile customization.\n\n### Technical Tasks\n- [ ] Define request/response DTOs with Jakarta validation (`RegisterRequest`, `LoginRequest`, `TokenRefreshRequest`, `UserProfileDTO`)\n- [ ] Implement `AuthController`:\n  - `POST /api/v1/auth/register` - Create user account, hash password, return 201 Created\n  - `POST /api/v1/auth/login` - Authenticate credentials, return access + refresh tokens\n  - `POST /api/v1/auth/refresh` - Validate refresh token and issue new access token\n  - `POST /api/v1/auth/logout` - Revoke tokens via Redis blocklist\n- [ ] Implement `UserController`:\n  - `GET /api/v1/users/me` - Fetch authenticated user profile\n  - `PUT /api/v1/users/me` - Update creator preferences (tone, language, style)\n- [ ] Implement `@ControllerAdvice` global exception handler returning standard RFC 7807 ProblemDetail responses\n\n### Acceptance Criteria\n- [ ] Validation errors (e.g. invalid email, short password) return HTTP 400 with field-level details\n- [ ] Successful registration returns sanitized user profile without sensitive fields (password hash)\n- [ ] MockMvc controller tests verify all HTTP status codes and error paths\n\n### Dependencies & Technical Notes\n- Requires JWT Provider & JPA Repositories\n- Estimated Effort: 2 - 2.5 days",
+                    "type": "type:feature",
+                    "priority": "priority:high",
+                    "phase": "phase-1"
+                },
+                {
+                    "title": "Implement DPDP Act 2023 & GDPR compliance (consent tracking, data export & erasure)",
+                    "description": "### Context & Objective\nSatisfy legal and regulatory requirements under India's Digital Personal Data Protection (DPDP) Act 2023 and GDPR, including explicit consent records, data portability, and the Right to Erasure.\n\n### Technical Tasks\n- [ ] Implement `POST /api/v1/users/consent` recording explicit consent timestamp, IP address, consent type (`VOICE_CLONING`, `MARKETING`, `TERMS`), and policy version\n- [ ] Implement `GET /api/v1/users/consent` returning current active consents for the user\n- [ ] Implement GDPR Right to Data Portability: `GET /api/v1/users/export` generating comprehensive JSON export of all user data\n- [ ] Implement GDPR / DPDP Right to Erasure: `DELETE /api/v1/users/me` initiating account anonymization/soft-deletion and revoking active sessions\n- [ ] Store audit trail in `audit_logs` table with immutable timestamps\n\n### Acceptance Criteria\n- [ ] Explicit consent records are persisted and verifiable by downstream services (e.g. Voice Service for voice cloning)\n- [ ] Data export returns valid, machine-readable JSON containing user profile, consent records, and activity metadata\n- [ ] Deletion marks account deleted, immediately invalidates credentials, and writes audit record\n\n### Dependencies & Technical Notes\n- Compliance requirement from PRD Section 10\n- Estimated Effort: 2 days",
+                    "type": "type:feature",
+                    "priority": "priority:high",
+                    "phase": "phase-1"
+                },
+                {
+                    "title": "Implement integration test suite with Testcontainers & OpenAPI documentation",
+                    "description": "### Context & Objective\nEnsure reliability, regression defense, and interactive API documentation for User-Service before Phase 1 launch.\n\n### Technical Tasks\n- [ ] Configure Testcontainers for PostgreSQL and Redis in `src/test/java`\n- [ ] Implement end-to-end integration tests:\n  - Complete registration -> login -> token refresh -> profile update -> logout flow\n  - Concurrent authentication attempts and rate-limiting behavior\n- [ ] Configure SpringDoc OpenAPI 3.0 (`springdoc-openapi-starter-webmvc-ui`)\n- [ ] Annotate endpoints and DTOs with `@Operation`, `@ApiResponse`, and `@Schema` descriptions\n- [ ] Configure JaCoCo code coverage plugin and verify target (>80% line coverage)\n\n### Acceptance Criteria\n- [ ] Test suite executes hermetically in `mvn test` without pre-existing databases\n- [ ] Swagger UI accessible at `/swagger-ui.html` showing full API documentation and schemas\n- [ ] Code coverage reaches >= 80% across service and controller layers\n\n### Dependencies & Technical Notes\n- Docker environment required for Testcontainers\n- Estimated Effort: 1.5 - 2 days",
+                    "type": "type:testing",
+                    "priority": "priority:medium",
+                    "phase": "phase-1"
                 }
             ]
         },
@@ -80,16 +115,46 @@
             "phase": "phase-1",
             "issues": [
                 {
-                    "title": "Setup FastAPI project with PostgreSQL & Redis integration",
-                    "description": "- Create FastAPI project structure with async support\n- Configure SQLAlchemy ORM for PostgreSQL connection\n- Setup Redis cache client for quota tracking\n- Add Pydantic models for request/response validation\n- Setup testing with pytest and fixtures\n- Create Dockerfile and docker-compose.yml",
+                    "title": "Setup FastAPI async framework, SQLAlchemy 2.0, Redis connection & Docker",
+                    "description": "### Context & Objective\nScaffold the foundational async infrastructure for Subscription-Service using FastAPI, async SQLAlchemy 2.0, and Redis connection pools.\n\n### Technical Tasks\n- [ ] Configure FastAPI application with async lifespan event handlers in `src/main.py`\n- [ ] Configure `pydantic-settings` in `src/core/config.py` loading database URLs, Redis URLs, and Stripe secrets from `.env`\n- [ ] Setup SQLAlchemy 2.0 async engine and session factory with connection pooling and pre-ping\n- [ ] Setup async Redis client with automatic reconnect logic\n- [ ] Create multi-stage `Dockerfile` and `docker-compose.yml` with PostgreSQL 15 and Redis 7\n- [ ] Implement `/health` endpoint checking DB and Redis connectivity\n\n### Acceptance Criteria\n- [ ] Service boots locally with `uvicorn main:app --reload`\n- [ ] `GET /health` returns HTTP 200 with `{\"database\":\"connected\",\"redis\":\"connected\"}`\n- [ ] Containerized service runs healthy in Docker Compose\n\n### Dependencies & Technical Notes\n- Python 3.11, FastAPI, SQLAlchemy 2.0, Redis\n- Estimated Effort: 1.5 - 2 days",
                     "type": "type:setup",
-                    "priority": "priority:high"
+                    "priority": "priority:high",
+                    "phase": "phase-1"
                 },
                 {
-                    "title": "Implement subscription tier management & quota enforcement",
-                    "description": "- Create Subscription database models (Free, Pro, Enterprise tiers)\n- Implement usage tracking endpoints: GET /api/subscriptions/{userId}/usage\n- Create quota validation middleware to block overages\n- Implement tier upgrade/downgrade endpoints\n- Setup Stripe webhook handler for payment events\n- Add logging for usage tracking",
+                    "title": "Implement database models & Alembic migrations for subscription tiers & quotas",
+                    "description": "### Context & Objective\nDefine the data schema for subscription tiers (Free, Pro, Enterprise), user subscriptions, and usage records with Alembic async migrations.\n\n### Technical Tasks\n- [ ] Configure Alembic for async SQLAlchemy migrations in `migrations/`\n- [ ] Create `SubscriptionPlan` model (tier, name, price_cents, monthly_video_minutes, monthly_voice_chars, max_storage_mb)\n- [ ] Create `UserSubscription` model (user_id, plan_id, stripe_customer_id, stripe_subscription_id, status, current_period_end)\n- [ ] Create `UsageRecord` model (user_id, period_start, period_end, video_minutes_used, voice_chars_used, storage_mb_used)\n- [ ] Write seed migration populating default plans: Free (3 videos/mo), Pro (30 videos/mo), Enterprise (unlimited)\n\n### Acceptance Criteria\n- [ ] `alembic upgrade head` creates all tables and constraints without errors\n- [ ] Initial migration seeds Free, Pro, and Enterprise plan records\n- [ ] Downgrade migration cleans up tables properly\n\n### Dependencies & Technical Notes\n- Follow models / schemas pattern in CLAUDE.md\n- Estimated Effort: 2 days",
                     "type": "type:feature",
-                    "priority": "priority:high"
+                    "priority": "priority:high",
+                    "phase": "phase-1"
+                },
+                {
+                    "title": "Implement real-time quota tracking & atomic rate-limiting with Redis",
+                    "description": "### Context & Objective\nEnforce subscription plan quotas with sub-millisecond latency using Redis atomic counters to prevent resource abuse across microservices.\n\n### Technical Tasks\n- [ ] Implement Redis Lua scripts for atomic check-and-consume quota operations (`quota:{user_id}:{metric}:{period}`)\n- [ ] Build internal endpoint `POST /api/v1/quota/check-and-consume`:\n  - Validates if user has remaining quota for requested amount (e.g. 2 video minutes, 1500 voice characters)\n  - Atomically increments usage if under limit; returns 402/429 with remaining quota if limit reached\n- [ ] Build endpoint `GET /api/v1/subscriptions/{userId}/usage` returning current usage vs plan limits\n- [ ] Implement periodic background task (or Celery/FastAPI task) syncing Redis usage counters to PostgreSQL `usage_records`\n\n### Acceptance Criteria\n- [ ] Quota check executes in under 5ms via Redis\n- [ ] Race conditions prevented during concurrent generation requests\n- [ ] Exceeding quota returns HTTP 402 Payment Required with clear upgrade call-to-action\n\n### Dependencies & Technical Notes\n- Redis 7 Lua scripting\n- Estimated Effort: 2 - 2.5 days",
+                    "type": "type:feature",
+                    "priority": "priority:high",
+                    "phase": "phase-1"
+                },
+                {
+                    "title": "Implement Stripe billing integration & customer checkout sessions",
+                    "description": "### Context & Objective\nIntegrate Stripe billing SDK to enable seamless upgrades from Free to Pro and Enterprise tiers, plus customer portal access.\n\n### Technical Tasks\n- [ ] Initialize Stripe Python SDK with API keys and webhook secret\n- [ ] Implement `POST /api/v1/billing/create-checkout-session`:\n  - Creates or retrieves Stripe customer for authenticated user\n  - Generates Stripe Checkout Session URL with success/cancel redirect URLs\n- [ ] Implement `POST /api/v1/billing/create-customer-portal-session`:\n  - Generates Stripe Customer Portal session URL for updating payment methods and viewing invoices\n- [ ] Build Pydantic schemas for request validation and response serialization\n\n### Acceptance Criteria\n- [ ] Checkout endpoint returns valid Stripe URL redirecting to Stripe payment page\n- [ ] Customer portal endpoint returns valid Stripe portal session URL\n- [ ] Stripe API exceptions handled with structured HTTP 400/502 responses\n\n### Dependencies & Technical Notes\n- Stripe API Python SDK\n- Estimated Effort: 2 days",
+                    "type": "type:feature",
+                    "priority": "priority:high",
+                    "phase": "phase-1"
+                },
+                {
+                    "title": "Implement Stripe webhook handler & subscription lifecycle state management",
+                    "description": "### Context & Objective\nProcess real-time Stripe lifecycle webhooks to update user subscription status, renew quotas on invoice payment, and handle cancellations.\n\n### Technical Tasks\n- [ ] Implement `POST /api/v1/billing/webhook` endpoint with raw body payload parsing\n- [ ] Cryptographically verify Stripe webhook signature (`stripe.Webhook.construct_event`)\n- [ ] Handle core Stripe events:\n  - `checkout.session.completed` - Activate subscription and link Stripe customer\n  - `customer.subscription.updated` - Handle plan upgrades, downgrades, and renewals\n  - `customer.subscription.deleted` - Revert user to Free tier upon cancellation\n  - `invoice.payment_succeeded` - Reset monthly quota counters in Redis and DB\n  - `invoice.payment_failed` - Mark subscription past-due and notify user\n- [ ] Implement idempotency checking using webhook event IDs to prevent duplicate processing\n\n### Acceptance Criteria\n- [ ] Unsigned or forged webhook payloads return HTTP 400 Bad Request\n- [ ] Valid webhooks update `user_subscriptions` and flush cached tier in Redis\n- [ ] Idempotent handler ignores duplicate events safely\n\n### Dependencies & Technical Notes\n- Critical for billing reliability\n- Estimated Effort: 2 - 2.5 days",
+                    "type": "type:feature",
+                    "priority": "priority:high",
+                    "phase": "phase-1"
+                },
+                {
+                    "title": "Implement Pytest test suite with Stripe mocks & OpenAPI documentation",
+                    "description": "### Context & Objective\nEstablish robust test coverage for billing and quota logic with mock Stripe fixtures, and generate complete OpenAPI documentation.\n\n### Technical Tasks\n- [ ] Setup `pytest` configuration with `pytest-asyncio`, SQLite async in-memory engine, and `fakeredis`\n- [ ] Create mock fixtures for Stripe API responses and webhook event payloads\n- [ ] Write tests for:\n  - Quota exhaustion edge cases and concurrent request behavior\n  - Checkout session creation and customer creation\n  - All webhook event transitions (`completed`, `updated`, `deleted`, `payment_failed`)\n- [ ] Document all endpoints, error schemas, and tags in FastAPI OpenAPI configuration\n\n### Acceptance Criteria\n- [ ] `pytest tests/` runs hermetically with >80% code coverage\n- [ ] Stripe API and Redis mocked without real network dependencies\n- [ ] Swagger documentation available at `/docs` with detailed schema descriptions\n\n### Dependencies & Technical Notes\n- Pytest, pytest-asyncio, fakeredis\n- Estimated Effort: 1.5 - 2 days",
+                    "type": "type:testing",
+                    "priority": "priority:medium",
+                    "phase": "phase-1"
                 }
             ]
         },
@@ -100,16 +165,46 @@
             "phase": "phase-1",
             "issues": [
                 {
-                    "title": "Setup Express.js with TypeScript & OpenAI integration",
-                    "description": "- Initialize Node.js project with TypeScript configuration\n- Setup Express.js with async/await error handling middleware\n- Configure environment variables for OpenAI API key\n- Add request validation with Joi/Zod\n- Setup Winston logging with structured logs\n- Create Dockerfile and docker-compose.yml",
+                    "title": "Setup Express.js TypeScript scaffolding, Zod validation, error handling & Docker",
+                    "description": "### Context & Objective\nScaffold the Node.js TypeScript microservice with structured logging, Zod validation, centralized error handling, and containerized Docker setup.\n\n### Technical Tasks\n- [ ] Setup TypeScript (`tsconfig.json`), ESLint, Prettier, and Vitest configuration\n- [ ] Configure Express application structure with correlation IDs and Winston structured logger\n- [ ] Implement global async error middleware catching unhandled exceptions and formatting standard JSON responses\n- [ ] Implement Zod request validation middleware for body, query params, and URL params\n- [ ] Create `Dockerfile` (multi-stage build) and `docker-compose.yml` with PostgreSQL 15, Redis 7, and Kafka brokers\n\n### Acceptance Criteria\n- [ ] `npm run build` compiles TypeScript to `dist/` without errors\n- [ ] `npm run dev` starts Express server with hot-reloading\n- [ ] `GET /health` returns HTTP 200 `{\"status\":\"healthy\"}`\n- [ ] Invalid requests produce structured validation errors with HTTP 400\n\n### Dependencies & Technical Notes\n- Node.js 20+, TypeScript, Express, Zod\n- Estimated Effort: 1.5 - 2 days",
                     "type": "type:setup",
-                    "priority": "priority:high"
+                    "priority": "priority:high",
+                    "phase": "phase-1"
                 },
                 {
-                    "title": "Integrate OpenAI API & implement prompt engineering",
-                    "description": "- Create script generation endpoint: POST /api/scripts/generate\n- Implement prompt templates for different tones (beginner, professional, casual)\n- Add multi-language support in prompts (detect from request)\n- Implement response parsing & validation\n- Add caching layer with Redis (TTL: 2 hours)\n- Create unit tests for prompt templates\n- Add Kafka producer to publish 'script.generated' events",
+                    "title": "Implement PostgreSQL schema, migrations & repository layer for scripts",
+                    "description": "### Context & Objective\nEstablish persistent storage for generated scripts, scene structures, and project metadata with native `pg.Pool` connection pooling.\n\n### Technical Tasks\n- [ ] Write SQL migrations for `scripts` table (id, user_id, project_id, title, topic, tone, language, scenes_json, word_count, estimated_duration_sec, created_at, updated_at)\n- [ ] Setup `pg.Pool` database connection with environment-driven pooling parameters and healthcheck query\n- [ ] Implement `ScriptRepository` with typed SQL queries:\n  - `create(scriptData)`\n  - `findById(id)`\n  - `findByUserId(userId, pagination)`\n  - `update(id, scriptData)`\n  - `delete(id)`\n- [ ] Add database indexes on `user_id`, `project_id`, and `created_at`\n\n### Acceptance Criteria\n- [ ] Database migrations execute cleanly on empty database\n- [ ] Repository CRUD operations execute with typed row mappers\n- [ ] Unit tests verify repository methods with mock database client\n\n### Dependencies & Technical Notes\n- Follow Repository pattern from CLAUDE.md\n- Estimated Effort: 2 days",
                     "type": "type:feature",
-                    "priority": "priority:high"
+                    "priority": "priority:high",
+                    "phase": "phase-1"
+                },
+                {
+                    "title": "Implement OpenAI API integration & multi-tone prompt engineering engine",
+                    "description": "### Context & Objective\nBuild the core script generation engine using OpenAI API with prompt templates supporting beginner, professional, casual, and respectful tones with structured JSON outputs.\n\n### Technical Tasks\n- [ ] Initialize OpenAI SDK client with API key, timeout, and exponential backoff retry policy\n- [ ] Implement modular prompt templates supporting tones:\n  - `beginner`: Clear, jargon-free explanations with simple metaphors\n  - `professional`: Authoritative, structured, industry-standard insights\n  - `casual`: Conversational, engaging, punchy hook, relatable pacing\n  - `respectful`: Formal, polite, informative delivery\n- [ ] Add multi-language prompting with language auto-detection or explicit target language parameter\n- [ ] Enforce OpenAI structured outputs (JSON Schema mode) returning:\n  - `hook`: First 3-5 seconds high-retention opening\n  - `scenes`: Array of scene blocks with `text`, `visual_cue`, and `pacing`\n  - `call_to_action`: Closing CTA\n  - `estimated_duration`: Predicted spoken seconds\n\n### Acceptance Criteria\n- [ ] Generated scripts conform 100% to scene JSON schema\n- [ ] Tone variations produce noticeably distinct voice, vocabulary, and sentence structures\n- [ ] API timeouts or rate limits trigger retries without failing immediately\n\n### Dependencies & Technical Notes\n- OpenAI API (GPT-4o / GPT-4o-mini)\n- Estimated Effort: 2 - 2.5 days",
+                    "type": "type:feature",
+                    "priority": "priority:high",
+                    "phase": "phase-1"
+                },
+                {
+                    "title": "Implement script generation & management REST endpoints with Redis caching",
+                    "description": "### Context & Objective\nExpose REST API endpoints for generating, reading, editing, and deleting scripts, coupled with a Redis caching layer to maximize read performance.\n\n### Technical Tasks\n- [ ] Implement REST endpoints in `src/controllers/script.controller.ts`:\n  - `POST /api/v1/scripts/generate` - Trigger AI generation with topic, tone, language\n  - `GET /api/v1/scripts/:id` - Retrieve script by ID\n  - `GET /api/v1/scripts/user/:userId` - List user's scripts with pagination\n  - `PUT /api/v1/scripts/:id` - Update script scenes or manual text edits\n  - `DELETE /api/v1/scripts/:id` - Delete script\n- [ ] Integrate Redis caching layer:\n  - Cache script reads with key `script:{id}` (TTL: 2 hours)\n  - Invalidate `script:{id}` and `script:{userId}` on updates or deletions\n- [ ] Add Zod validation schemas for all inputs and DTOs\n\n### Acceptance Criteria\n- [ ] `POST /api/v1/scripts/generate` returns structured script within SLA (<15s)\n- [ ] Subsequent `GET /api/v1/scripts/:id` calls hit Redis cache (<10ms latency)\n- [ ] Edits invalidate cached data and update database synchronously\n\n### Dependencies & Technical Notes\n- Redis 7, OpenAI Prompt Engine, Script Repository\n- Estimated Effort: 2 days",
+                    "type": "type:feature",
+                    "priority": "priority:high",
+                    "phase": "phase-1"
+                },
+                {
+                    "title": "Implement Kafka event producer for script lifecycle events (script.generated)",
+                    "description": "### Context & Objective\nPublish domain events over Apache Kafka to notify downstream services (Voice-Service, Analytics-Service) whenever a script is generated or updated.\n\n### Technical Tasks\n- [ ] Configure `kafkajs` producer client with reconnection logic and graceful shutdown hooks\n- [ ] Define Avro / JSON event schemas for:\n  - `script.generated`: Contains `script_id`, `user_id`, `project_id`, `scenes`, `language`, `tone`, `word_count`, `timestamp`\n  - `script.updated`: Emitted on manual script edits\n- [ ] Implement `EventPublisherService` with retry logic and dead-letter queue (DLQ) logging\n- [ ] Dispatch `script.generated` event automatically upon successful completion of script generation\n\n### Acceptance Criteria\n- [ ] Successfully produced events arrive at `script.generated` Kafka topic\n- [ ] Event payloads strictly adhere to schema definition\n- [ ] Kafka broker downtime does not crash Express server (logged with fallback)\n\n### Dependencies & Technical Notes\n- Kafka 3.x, kafkajs\n- Estimated Effort: 1.5 - 2 days",
+                    "type": "type:feature",
+                    "priority": "priority:high",
+                    "phase": "phase-1"
+                },
+                {
+                    "title": "Implement Vitest unit & integration test suite with OpenAI and Kafka mocks",
+                    "description": "### Context & Objective\nEnsure code quality, prompt validation, and resilience against external service failures with automated Vitest test suites.\n\n### Technical Tasks\n- [ ] Configure Vitest and Supertest in `tests/`\n- [ ] Implement unit tests for prompt template engine and Zod validation schemas\n- [ ] Implement integration tests mocking OpenAI API responses and Kafka producer\n- [ ] Test error recovery paths: OpenAI rate-limits, DB query failures, malformed input payloads\n- [ ] Setup code coverage reporting with target >80% branch and line coverage\n\n### Acceptance Criteria\n- [ ] `npm test` executes all test suites without external network calls\n- [ ] Code coverage exceeds 80% across controllers, services, and repositories\n- [ ] CI pipeline validates test suite on every PR\n\n### Dependencies & Technical Notes\n- Vitest, Supertest\n- Estimated Effort: 1.5 - 2 days",
+                    "type": "type:testing",
+                    "priority": "priority:medium",
+                    "phase": "phase-1"
                 }
             ]
         },
@@ -120,16 +215,53 @@
             "phase": "phase-1",
             "issues": [
                 {
-                    "title": "Setup FastAPI project with ElevenLabs & voice processing",
-                    "description": "- Create FastAPI project with async task support\n- Integrate ElevenLabs API client for TTS\n- Setup voice cloning infrastructure (GPT-SoVITS)\n- Create PostgreSQL models for voice storage & metadata\n- Setup Redis cache for voice library\n- Configure file storage for generated audio files\n- Create Dockerfile and docker-compose.yml",
+                    "title": "Setup FastAPI async project with audio processing libraries & Docker",
+                    "description": "### Context & Objective\nInitialize the async FastAPI framework for Voice-Service, bundling essential audio manipulation tools (FFmpeg, soundfile, pydub) and container configuration.\n\n### Technical Tasks\n- [ ] Configure FastAPI app with async lifespan handlers, structured logging, and Pydantic v2 settings\n- [ ] Install and configure audio dependencies (`pydub`, `soundfile`, `scipy`, `numpy`)\n- [ ] Configure multi-stage `Dockerfile` with system-level FFmpeg and libsndfile binaries\n- [ ] Setup `docker-compose.yml` with PostgreSQL 15, Redis 7, and Kafka\n- [ ] Implement `/health` endpoint validating DB, Redis, and FFmpeg binary availability\n\n### Acceptance Criteria\n- [ ] Service boots and loads audio libraries without dynamic linker errors\n- [ ] `GET /health` returns HTTP 200 with audio subsystem status `healthy`\n- [ ] Docker container successfully runs FFmpeg commands from Python subprocess\n\n### Dependencies & Technical Notes\n- Python 3.11, FastAPI, FFmpeg, Redis\n- Estimated Effort: 1.5 - 2 days",
                     "type": "type:setup",
-                    "priority": "priority:high"
+                    "priority": "priority:high",
+                    "phase": "phase-1"
                 },
                 {
-                    "title": "Implement TTS & voice cloning with quality scoring",
-                    "description": "- Create voice generation endpoint: POST /api/voice/generate\n- Implement ElevenLabs TTS with accent/speed control\n- Implement voice cloning with GPT-SoVITS (if user provides sample)\n- Add voice quality scoring (MOS - Mean Opinion Score)\n- Create Redis caching for generated voices (TTL: 2 hours)\n- Implement Kafka consumer to listen for 'script.generated' events\n- Add publish to 'voice.generated' event on completion",
+                    "title": "Implement database models & Alembic migrations for voice profiles & audio metadata",
+                    "description": "### Context & Objective\nDesign and apply database schema for curated preset voices, user custom voice models, audio generation logs, and DPDP compliance records.\n\n### Technical Tasks\n- [ ] Setup Alembic for async migrations in `migrations/`\n- [ ] Create `VoiceProfile` model (id, name, gender, accent, language, provider [elevenlabs/sovits], external_voice_id, is_preset, user_id)\n- [ ] Create `AudioGeneration` model (id, script_id, voice_id, audio_url, duration_seconds, sample_rate, mos_score, status, timestamps)\n- [ ] Create `VoiceConsentRecord` model (user_id, voice_model_id, consent_timestamp, ip_address, consent_proof_url)\n- [ ] Write seed migration with curated preset voices (multi-accent, multi-gender)\n\n### Acceptance Criteria\n- [ ] `alembic upgrade head` creates all tables and foreign key relationships cleanly\n- [ ] Default preset voices queryable via repository\n- [ ] Alembic downgrade drops tables without orphan constraints\n\n### Dependencies & Technical Notes\n- SQLAlchemy 2.0 Async, Alembic\n- Estimated Effort: 2 days",
                     "type": "type:feature",
-                    "priority": "priority:high"
+                    "priority": "priority:high",
+                    "phase": "phase-1"
+                },
+                {
+                    "title": "Implement ElevenLabs TTS API client & audio stream processing engine",
+                    "description": "### Context & Objective\nIntegrate ElevenLabs Text-to-Speech API for generating high-fidelity voiceovers with voice parameter controls (accent, speed, stability, style).\n\n### Technical Tasks\n- [ ] Integrate ElevenLabs Python async SDK with API key management and rate limit backoff\n- [ ] Build voice generation engine supporting parameters:\n  - `stability`, `similarity_boost`, `style`, `speed`\n- [ ] Implement streaming audio receiver, buffering audio chunks into MP3/WAV format\n- [ ] Store generated audio files in object storage / local storage with unique UUID paths\n- [ ] Extract accurate audio duration and waveform metadata using `soundfile`\n\n### Acceptance Criteria\n- [ ] Given text and voice ID, engine outputs clear audio file within SLA (<30s for 1-minute audio)\n- [ ] Audio duration calculated to within 50ms precision\n- [ ] Generated audio files accessible via secure HTTP/S3 URL\n\n### Dependencies & Technical Notes\n- ElevenLabs API\n- Estimated Effort: 2 - 2.5 days",
+                    "type": "type:feature",
+                    "priority": "priority:high",
+                    "phase": "phase-1"
+                },
+                {
+                    "title": "Implement voice cloning pipeline (GPT-SoVITS) with DPDP consent verification",
+                    "description": "### Context & Objective\nBuild custom voice cloning integration using GPT-SoVITS with mandatory explicit consent enforcement compliant with India's DPDP Act 2023.\n\n### Technical Tasks\n- [ ] Implement sample upload endpoint `POST /api/v1/voice/clone/sample`:\n  - Validates audio format (WAV/MP3), duration (10-60s), and Signal-to-Noise Ratio (SNR)\n- [ ] Enforce DPDP Act 2023 compliance check:\n  - Verify active, signed `VoiceConsentRecord` exists before accepting training samples\n  - Reject cloning requests with HTTP 403 Forbidden if explicit consent is missing\n- [ ] Integrate with GPT-SoVITS inference service to adapt voice embeddings\n- [ ] Implement voice deletion endpoint `DELETE /api/v1/voice/{id}` permanently deleting model weights and training samples (Right to Erasure)\n\n### Acceptance Criteria\n- [ ] Voice cloning strictly blocked without recorded user consent\n- [ ] Valid sample initiates model adaptation and creates custom `VoiceProfile`\n- [ ] Voice deletion permanently removes all model files and samples, writing audit log\n\n### Dependencies & Technical Notes\n- DPDP Act 2023 compliance requirement (PRD Section 10)\n- Estimated Effort: 2.5 - 3 days",
+                    "type": "type:feature",
+                    "priority": "priority:high",
+                    "phase": "phase-2"
+                },
+                {
+                    "title": "Implement Kafka consumer (script.generated) & producer (voice.generated)",
+                    "description": "### Context & Objective\nConnect Voice-Service to the event pipeline: consume `script.generated` to trigger voiceover generation, and publish `voice.generated` upon completion.\n\n### Technical Tasks\n- [ ] Implement Kafka consumer using `aiokafka` subscribing to `script.generated` topic\n- [ ] Parse incoming script scenes and trigger voice generation per scene or combined narrative\n- [ ] Extract scene-level audio timestamps for downstream subtitle and B-roll synchronization\n- [ ] Publish `voice.generated` event with payload:\n  - `script_id`, `voice_id`, `audio_url`, `duration_seconds`, `scene_timestamps`, `mos_score`\n- [ ] Implement dead-letter queue (DLQ) publishing `voice.failed` on unrecoverable generation errors\n\n### Acceptance Criteria\n- [ ] Consuming `script.generated` automatically triggers end-to-end voice synthesis\n- [ ] `voice.generated` published with accurate timestamp alignment per scene\n- [ ] Consumer handles broker reconnection and offset commits cleanly\n\n### Dependencies & Technical Notes\n- Kafka 3.x, aiokafka\n- Estimated Effort: 2 days",
+                    "type": "type:feature",
+                    "priority": "priority:high",
+                    "phase": "phase-1"
+                },
+                {
+                    "title": "Implement MOS voice quality scoring engine & Redis audio metadata caching",
+                    "description": "### Context & Objective\nEvaluate synthetic voice quality using Mean Opinion Score (MOS) metrics to guarantee audio quality parity with PRD target (>4.0 MOS), with Redis caching for repeated synthesis.\n\n### Technical Tasks\n- [ ] Implement MOS quality estimator assessing acoustic clarity, naturalness, and audio artifacts\n- [ ] Flag generations with MOS < 3.8 for automated retry or fallback voice selection\n- [ ] Implement Redis caching:\n  - Cache voice metadata under `voice:{voiceId}` (TTL: 24h)\n  - Cache generated audio by text hash under `voice:audio:{hash}` (TTL: 2h) to avoid re-synthesizing identical text\n- [ ] Expose metrics endpoint reporting average MOS scores per voice provider\n\n### Acceptance Criteria\n- [ ] MOS score calculated for every audio generation and recorded in DB\n- [ ] Audio with MOS < 3.8 logged as warning and triggers retry\n- [ ] Redis cache serves previously synthesized audio without calling ElevenLabs API\n\n### Dependencies & Technical Notes\n- PRD Section 9 Non-Functional Requirements (MOS > 4.0)\n- Estimated Effort: 2 days",
+                    "type": "type:feature",
+                    "priority": "priority:medium",
+                    "phase": "phase-1"
+                },
+                {
+                    "title": "Implement Pytest test suite with audio mock fixtures & consent validation tests",
+                    "description": "### Context & Objective\nBuild comprehensive automated test coverage for voice synthesis, DPDP consent checks, and Kafka streaming using mocked audio fixtures.\n\n### Technical Tasks\n- [ ] Setup `pytest` with `pytest-asyncio` and mock audio file fixtures (synthetic WAV tones)\n- [ ] Mock ElevenLabs SDK and GPT-SoVITS external calls\n- [ ] Write test cases:\n  - DPDP consent validation (allowed with consent, blocked without)\n  - Scene timestamp alignment calculations\n  - Kafka consumer/producer message handling and DLQ behavior\n  - Audio duration and MOS score calculations\n- [ ] Verify test suite runs hermetically in CI without API keys\n\n### Acceptance Criteria\n- [ ] `pytest tests/` runs cleanly with >80% code coverage\n- [ ] All external API calls mocked; no real audio charges incurred\n- [ ] CI pipeline validates test suite on every pull request\n\n### Dependencies & Technical Notes\n- Pytest, pytest-asyncio\n- Estimated Effort: 1.5 - 2 days",
+                    "type": "type:testing",
+                    "priority": "priority:medium",
+                    "phase": "phase-1"
                 }
             ]
         },
@@ -140,16 +272,46 @@
             "phase": "phase-1",
             "issues": [
                 {
-                    "title": "Setup Express.js with media processing & API integrations",
-                    "description": "- Initialize Node.js project with TypeScript configuration\n- Setup FFmpeg for video/image processing utilities\n- Configure Runway ML API client for image upscaling\n- Setup stock footage API clients (Pexels/Pixabay)\n- Create PostgreSQL models for media suggestions & metadata\n- Setup Redis cache for suggestion results\n- Create Dockerfile and docker-compose.yml",
+                    "title": "Setup Express.js TypeScript scaffolding with FFmpeg integration, S3 client & Docker",
+                    "description": "### Context & Objective\nInitialize the Express TypeScript framework for Media-Service, integrating FFmpeg media analysis tools and AWS S3 storage client.\n\n### Technical Tasks\n- [ ] Initialize TypeScript Express project with Vitest, ESLint, Prettier, and Winston logging\n- [ ] Setup FFmpeg / ffprobe system wrapper for media inspection (dimensions, frame rate, duration)\n- [ ] Configure AWS S3 / MinIO client with credential management and bucket initialization\n- [ ] Create multi-stage `Dockerfile` bundling FFmpeg binaries\n- [ ] Configure `docker-compose.yml` with PostgreSQL 15, Redis 7, LocalStack S3, and Kafka\n- [ ] Implement `/health` endpoint verifying DB, S3, and FFmpeg binary availability\n\n### Acceptance Criteria\n- [ ] Service compiles and starts via `npm run dev`\n- [ ] `GET /health` returns HTTP 200 with media subsystem status\n- [ ] Docker container successfully runs FFmpeg probe commands\n\n### Dependencies & Technical Notes\n- Node.js 20+, Express, TypeScript, FFmpeg, AWS SDK v3\n- Estimated Effort: 1.5 - 2 days",
                     "type": "type:setup",
-                    "priority": "priority:high"
+                    "priority": "priority:high",
+                    "phase": "phase-1"
                 },
                 {
-                    "title": "Implement B-roll suggestions & image generation",
-                    "description": "- Create media suggestion endpoint: POST /api/media/suggest\n- Implement contextual B-roll recommendation algorithm\n- Integrate Runway ML API for image upscaling/enhancement\n- Integrate stock footage APIs for video clip retrieval\n- Add Redis caching for suggestions (TTL: 3 hours)\n- Implement Kafka consumer to listen for 'voice.generated' events\n- Add publish to 'media.ready' event with suggestions payload",
+                    "title": "Implement database schema & migrations for media suggestions & copyright tracking",
+                    "description": "### Context & Objective\nEstablish persistent storage for B-roll suggestions, stock asset metadata, and licensing attribution to comply with copyright regulations.\n\n### Technical Tasks\n- [ ] Write SQL migrations for `media_suggestions` table (id, script_id, scene_id, keyword, visual_prompt, asset_type, asset_url, preview_url, duration_sec, source [pexels/pixabay/runway], license_type, attribution, created_at)\n- [ ] Setup `pg.Pool` database connection with typed repository methods\n- [ ] Implement `MediaSuggestionRepository` supporting CRUD operations and batch insertions per script\n- [ ] Add indexes on `script_id`, `scene_id`, and `source`\n\n### Acceptance Criteria\n- [ ] Migrations create tables and constraints without errors\n- [ ] Repository persists suggestion sets with license attribution metadata\n- [ ] Queries by `script_id` return ordered suggestions matching scene sequence\n\n### Dependencies & Technical Notes\n- Copyright compliance requirement (PRD Section 10)\n- Estimated Effort: 2 days",
                     "type": "type:feature",
-                    "priority": "priority:high"
+                    "priority": "priority:high",
+                    "phase": "phase-1"
+                },
+                {
+                    "title": "Implement contextual B-roll recommendation engine & stock footage search (Pexels/Pixabay)",
+                    "description": "### Context & Objective\nDevelop the contextual B-roll recommendation algorithm that analyzes script scenes and queries stock video APIs (Pexels, Pixabay) for relevant video clips.\n\n### Technical Tasks\n- [ ] Implement NLP keyword and visual theme extractor from script scene text\n- [ ] Build API clients for Pexels and Pixabay video search with API key rotation and rate-limit handling\n- [ ] Implement video ranking algorithm scoring clips by relevance, orientation (16:9, 9:16), and duration matching scene voice length\n- [ ] Implement Redis caching for stock query results under `media:suggestions:{topicId}` (TTL: 3 hours)\n- [ ] Build REST endpoint `POST /api/v1/media/suggest` for manual or UI-triggered suggestions\n\n### Acceptance Criteria\n- [ ] Given scene text, engine returns 3-5 ranked stock video clips with preview URLs\n- [ ] Clips match requested orientation (landscape vs vertical/shorts)\n- [ ] Redis cache serves repeat queries in <10ms\n\n### Dependencies & Technical Notes\n- Pexels & Pixabay APIs, Redis 7\n- Estimated Effort: 2 - 2.5 days",
+                    "type": "type:feature",
+                    "priority": "priority:high",
+                    "phase": "phase-1"
+                },
+                {
+                    "title": "Implement AI image generation & upscaling with Runway ML API",
+                    "description": "### Context & Objective\nIntegrate Runway ML API to generate original AI images and upscale visuals when suitable stock video footage cannot be found.\n\n### Technical Tasks\n- [ ] Build Runway ML API client with authentication and task polling mechanism\n- [ ] Implement visual prompt synthesis translating script scenes into high-quality image prompts\n- [ ] Add image upscaling pipeline (1080p, 4K) for generated graphics\n- [ ] Upload generated assets directly to AWS S3 bucket with metadata tags\n- [ ] Record AI generation provenance in `media_suggestions` table\n\n### Acceptance Criteria\n- [ ] Image generation task generates high-resolution visuals matching prompt\n- [ ] Assets uploaded to S3 with presigned preview URLs\n- [ ] Provenance and AI disclosure metadata recorded for legal compliance\n\n### Dependencies & Technical Notes\n- Runway ML API, AWS S3\n- Estimated Effort: 2 - 2.5 days",
+                    "type": "type:feature",
+                    "priority": "priority:medium",
+                    "phase": "phase-2"
+                },
+                {
+                    "title": "Implement Kafka consumer (voice.generated) & producer (media.ready)",
+                    "description": "### Context & Objective\nAutomate media assignment within the event-driven generation pipeline by listening for `voice.generated` and emitting `media.ready`.\n\n### Technical Tasks\n- [ ] Configure `kafkajs` consumer listening to `voice.generated` topic\n- [ ] Parse scene timestamps and exact voiceover durations from message payload\n- [ ] Execute automated B-roll selection matching clip durations to scene audio length\n- [ ] Configure `kafkajs` producer publishing `media.ready` event with payload:\n  - `script_id`, `voice_audio_url`, `scenes`: array of matched video assets with start/end offsets, licenses, and download URLs\n- [ ] Implement DLQ handling for media matching failures\n\n### Acceptance Criteria\n- [ ] Consuming `voice.generated` triggers automated B-roll selection without manual intervention\n- [ ] `media.ready` event emitted with complete asset manifest\n- [ ] Total processing time for B-roll selection is <20 seconds\n\n### Dependencies & Technical Notes\n- Kafka 3.x, kafkajs\n- Estimated Effort: 2 days",
+                    "type": "type:feature",
+                    "priority": "priority:high",
+                    "phase": "phase-1"
+                },
+                {
+                    "title": "Implement Vitest test suite with stock API mocks & S3 storage verification",
+                    "description": "### Context & Objective\nEnsure reliability, keyword extraction precision, and error resilience through automated Vitest test suites.\n\n### Technical Tasks\n- [ ] Setup Vitest with Supertest and mocked HTTP clients\n- [ ] Mock Pexels, Pixabay, and Runway ML API responses\n- [ ] Mock AWS S3 client using LocalStack or in-memory mocks\n- [ ] Write test cases for:\n  - Keyword extraction and ranking algorithm accuracy\n  - Orientation filtering and duration matching\n  - Kafka consumer event handling and error recovery\n- [ ] Verify test suite achieves >80% line and branch coverage\n\n### Acceptance Criteria\n- [ ] `npm test` executes cleanly without external network calls\n- [ ] All external APIs mocked with fixture data\n- [ ] Code coverage exceeds 80%\n\n### Dependencies & Technical Notes\n- Vitest, Supertest\n- Estimated Effort: 1.5 - 2 days",
+                    "type": "type:testing",
+                    "priority": "priority:medium",
+                    "phase": "phase-1"
                 }
             ]
         },
@@ -160,16 +322,53 @@
             "phase": "phase-1",
             "issues": [
                 {
-                    "title": "Setup Spring Boot with AWS S3 & asset versioning",
-                    "description": "- Initialize Spring Boot 3.2 project with Maven\n- Configure AWS S3 SDK for object storage integration\n- Setup PostgreSQL models for asset metadata & versioning\n- Create S3 bucket configuration (versioning, lifecycle policies)\n- Setup Dockerfile with multi-stage build\n- Create docker-compose.yml with PostgreSQL & Redis",
+                    "title": "Setup Spring Boot 3.2 scaffolding with AWS S3 SDK, Kafka & Docker",
+                    "description": "### Context & Objective\nInitialize the Java 21 Spring Boot 3.2 project for Asset-Manager with AWS S3 integration, Kafka messaging, and containerized deployment.\n\n### Technical Tasks\n- [ ] Configure `pom.xml` with dependencies for Spring Boot 3.2, Spring Cloud AWS S3, Spring Kafka, Spring Data JPA, Redis, and Lombok\n- [ ] Setup multi-stage `Dockerfile` bundling FFmpeg binaries for video compilation\n- [ ] Configure `docker-compose.yml` with PostgreSQL 15, Redis 7, Kafka, and LocalStack S3\n- [ ] Configure `application.properties` with S3 bucket names, credentials, and Kafka topics\n- [ ] Implement `/actuator/health` endpoint verifying S3 bucket connectivity and DB status\n\n### Acceptance Criteria\n- [ ] Application compiles cleanly via `mvn clean compile`\n- [ ] Docker Compose starts all dependencies; LocalStack S3 bucket created automatically\n- [ ] Actuator health check returns HTTP 200 `{\"status\":\"UP\"}`\n\n### Dependencies & Technical Notes\n- Java 21, Spring Boot 3.2, AWS S3 SDK v2, Kafka\n- Estimated Effort: 1.5 - 2 days",
                     "type": "type:setup",
-                    "priority": "priority:high"
+                    "priority": "priority:high",
+                    "phase": "phase-1"
                 },
                 {
-                    "title": "Implement asset compilation & export management",
-                    "description": "- Create asset compilation endpoint: POST /api/assets/compile\n- Implement asset assembly (script + voice + media + captions)\n- Add multi-format export support (MP4, WebM, GIF)\n- Implement S3 presigned URL generation for downloads\n- Add versioning & rollback capability\n- Implement Kafka consumer to listen for 'media.ready' events\n- Publish to 'asset.compiled' event on completion",
+                    "title": "Implement database schema & entity models for asset manifests, versions & projects",
+                    "description": "### Context & Objective\nDefine the data layer for managing assembled projects, media manifests, compiled video exports, and version history.\n\n### Technical Tasks\n- [ ] Write Flyway migrations for `projects`, `asset_manifests`, `compiled_exports`, and `asset_versions`\n- [ ] Implement JPA entities with Lombok:\n  - `Project`: User association, title, status\n  - `AssetManifest`: Script reference, voice audio URL, video clip list, subtitle URL\n  - `CompiledExport`: Export format (MP4/WebM/GIF), resolution (1080p/720p), file size, S3 key, status\n  - `AssetVersion`: Version number, changelog, rollback pointer\n- [ ] Create Spring Data JPA repositories with query methods and pagination\n\n### Acceptance Criteria\n- [ ] Migrations apply cleanly on application startup\n- [ ] Entities support multiple export versions per project with rollback capability\n- [ ] Repository tests verify persistence and version lookup\n\n### Dependencies & Technical Notes\n- Follow Repository pattern from CLAUDE.md\n- Estimated Effort: 2 days",
                     "type": "type:feature",
-                    "priority": "priority:high"
+                    "priority": "priority:high",
+                    "phase": "phase-1"
+                },
+                {
+                    "title": "Implement AWS S3 storage manager & secure presigned URL generation with Redis caching",
+                    "description": "### Context & Objective\nManage S3 object storage lifecycle, structured key naming, and generate secure time-limited presigned URLs with Redis caching on the read path.\n\n### Technical Tasks\n- [ ] Implement `S3StorageService` managing object upload, deletion, and directory hierarchies (`/users/{userId}/projects/{projectId}/assets/`)\n- [ ] Implement presigned URL generator for secure client downloads (configurable TTL, default 15 minutes)\n- [ ] Implement multipart upload support for large video exports\n- [ ] Implement Redis caching layer: Cache presigned URLs and metadata under `asset:{id}` (TTL: 10 minutes) before hitting S3\n- [ ] Configure S3 lifecycle rules (transitions to Glacier/IA for aged raw assets)\n\n### Acceptance Criteria\n- [ ] Presigned URLs allow direct browser downloads without exposing S3 credentials\n- [ ] Expired presigned URLs are rejected by AWS S3\n- [ ] Read requests hit Redis cache first, minimizing S3 API calls\n\n### Dependencies & Technical Notes\n- AWS S3 SDK v2, Redis 7\n- Estimated Effort: 2 days",
+                    "type": "type:feature",
+                    "priority": "priority:high",
+                    "phase": "phase-1"
+                },
+                {
+                    "title": "Implement subtitle & caption auto-generation engine (SRT/WebVTT)",
+                    "description": "### Context & Objective\nGenerate perfectly synchronized subtitle files (SRT and WebVTT) from script text and voiceover timestamps, with styling customization.\n\n### Technical Tasks\n- [ ] Implement subtitle alignment engine matching words to timestamps from Voice-Service\n- [ ] Build SRT formatter (`00:00:01,000 --> 00:00:03,500`) with line-wrapping rules (max 32 characters per line)\n- [ ] Build WebVTT formatter with styling tags (positioning, bold emphasis)\n- [ ] Save generated subtitle files to S3 bucket and associate with project asset manifest\n- [ ] Provide REST endpoint `GET /api/v1/assets/{id}/subtitles` supporting `.srt` and `.vtt` formats\n\n### Acceptance Criteria\n- [ ] Subtitle timestamps match voice audio within 50ms accuracy\n- [ ] Generated files validate against standard SRT and WebVTT specifications\n- [ ] Subtitles download cleanly via API endpoint\n\n### Dependencies & Technical Notes\n- PRD Section 3 MVP requirement\n- Estimated Effort: 2 days",
+                    "type": "type:feature",
+                    "priority": "priority:high",
+                    "phase": "phase-1"
+                },
+                {
+                    "title": "Implement modular video assembly & multi-format export engine with FFmpeg",
+                    "description": "### Context & Objective\nBuild the video rendering pipeline using FFmpeg to assemble B-roll clips, voice audio track, and subtitles into downloadable video files (MP4, WebM, GIF).\n\n### Technical Tasks\n- [ ] Build FFmpeg command builder combining:\n  - Video clips concatenated with crossfade/cut transitions\n  - Voiceover audio synchronized to scene timing\n  - Subtitle burning (hardcoded captions) or soft subtitle track\n- [ ] Support export formats: MP4 (H.264 / AAC), WebM (VP9 / Opus), and short preview GIF\n- [ ] Implement asynchronous background job executor with status tracking (QUEUED, RENDERING, COMPLETED, FAILED)\n- [ ] Provide REST endpoint `POST /api/v1/assets/compile` and `GET /api/v1/assets/jobs/{jobId}/status`\n\n### Acceptance Criteria\n- [ ] Compilation generates valid, synchronized MP4 video within SLA (<2 minutes for 1-minute video)\n- [ ] Job status endpoint reports real-time rendering progress percentage\n- [ ] Output video uploaded to S3 upon completion\n\n### Dependencies & Technical Notes\n- FFmpeg system binary\n- Estimated Effort: 2.5 - 3 days",
+                    "type": "type:feature",
+                    "priority": "priority:high",
+                    "phase": "phase-1"
+                },
+                {
+                    "title": "Implement Kafka consumer (media.ready) & producer (asset.compiled)",
+                    "description": "### Context & Objective\nConnect Asset-Manager to Kafka event pipeline: consume `media.ready` to trigger compilation, and publish `asset.compiled` when video is ready.\n\n### Technical Tasks\n- [ ] Configure Spring Kafka consumer listening to `media.ready` topic\n- [ ] Parse asset manifest, download clips/audio to working directory, and initiate compilation job\n- [ ] Configure Spring Kafka producer publishing `asset.compiled` topic with payload:\n  - `project_id`, `user_id`, `export_id`, `download_url`, `formats`, `duration_seconds`, `file_size_bytes`, `compilation_latency_ms`\n- [ ] Publish `asset.failed` event on rendering or download failures\n\n### Acceptance Criteria\n- [ ] Receiving `media.ready` event automatically triggers video assembly pipeline\n- [ ] `asset.compiled` event published upon successful compilation with complete download metadata\n- [ ] Errors handled cleanly without consumer stalls\n\n### Dependencies & Technical Notes\n- Spring Kafka\n- Estimated Effort: 2 days",
+                    "type": "type:feature",
+                    "priority": "priority:high",
+                    "phase": "phase-1"
+                },
+                {
+                    "title": "Implement integration test suite with Testcontainers, LocalStack S3 & MockMvc",
+                    "description": "### Context & Objective\nValidate asset compilation, presigned URL generation, and Kafka event handling using hermetic Testcontainers integration tests.\n\n### Technical Tasks\n- [ ] Configure Testcontainers for PostgreSQL, Redis, Kafka, and LocalStack (S3)\n- [ ] Write integration tests for:\n  - Presigned URL generation and expiration validation\n  - Subtitle generator accuracy with mock voice timestamps\n  - Kafka consumer receiving `media.ready` and triggering compilation\n  - REST endpoints for asset download and export status\n- [ ] Verify test suite achieves >80% code coverage\n\n### Acceptance Criteria\n- [ ] `mvn test` executes successfully without external cloud infrastructure\n- [ ] MockMvc verifies all REST controller endpoints and response DTOs\n- [ ] JaCoCo report confirms >= 80% line coverage\n\n### Dependencies & Technical Notes\n- Testcontainers, LocalStack, MockMvc\n- Estimated Effort: 1.5 - 2 days",
+                    "type": "type:testing",
+                    "priority": "priority:medium",
+                    "phase": "phase-1"
                 }
             ]
         },
@@ -180,16 +379,46 @@
             "phase": "phase-2",
             "issues": [
                 {
-                    "title": "Setup FastAPI with TimescaleDB & metric aggregation",
-                    "description": "- Create FastAPI project with async support\n- Integrate TimescaleDB for time-series data storage\n- Setup Kafka consumer client for event streaming\n- Create database hypertables for metrics storage\n- Configure continuous aggregates for hourly/daily rollups\n- Setup Redis for real-time metric caching\n- Create Dockerfile and docker-compose.yml",
+                    "title": "Setup FastAPI async framework with TimescaleDB & Kafka stream consumer",
+                    "description": "### Context & Objective\nScaffold the foundational async infrastructure for Analytics-Service using FastAPI, TimescaleDB time-series database, and aiokafka consumer.\n\n### Technical Tasks\n- [ ] Initialize FastAPI app with async lifespan handlers and Pydantic v2 configuration\n- [ ] Setup SQLAlchemy 2.0 async engine with `asyncpg` configured for TimescaleDB\n- [ ] Configure TimescaleDB connection and verify `timescaledb` extension is enabled\n- [ ] Setup `aiokafka` consumer client with group management and automatic commit\n- [ ] Create `Dockerfile` and `docker-compose.yml` with TimescaleDB (PostgreSQL 15 + TimescaleDB extension) and Redis 7\n- [ ] Implement `/health` endpoint verifying TimescaleDB and Kafka connectivity\n\n### Acceptance Criteria\n- [ ] App boots locally with `uvicorn main:app`\n- [ ] TimescaleDB extension confirmed active (`CREATE EXTENSION IF NOT EXISTS timescaledb`)\n- [ ] `GET /health` returns HTTP 200 with database and broker status\n\n### Dependencies & Technical Notes\n- Python 3.11, FastAPI, TimescaleDB, aiokafka\n- Estimated Effort: 1.5 - 2 days",
                     "type": "type:setup",
-                    "priority": "priority:high"
+                    "priority": "priority:high",
+                    "phase": "phase-2"
                 },
                 {
-                    "title": "Implement event tracking & analytics dashboards",
-                    "description": "- Create metrics endpoints: GET /api/analytics/metrics, GET /api/analytics/dashboard\n- Implement Kafka consumer to listen for all service events\n- Store events in TimescaleDB with proper tagging\n- Create aggregations for user activity, generation latency, voice quality\n- Implement real-time metric caching in Redis\n- Add API for retrieving user-specific analytics\n- Create unit tests for metric calculations",
+                    "title": "Implement TimescaleDB hypertables, continuous aggregates & retention policies",
+                    "description": "### Context & Objective\nDesign and deploy time-series data structures in TimescaleDB for event tracking, generation latency, and hourly/daily metric aggregates.\n\n### Technical Tasks\n- [ ] Write Alembic migrations creating:\n  - `events` hypertable partitioned on `time` (time, event_type, user_id, service, payload, latency_ms)\n  - `generation_metrics` hypertable (time, project_id, user_id, total_latency_ms, script_latency_ms, voice_latency_ms, media_latency_ms, compile_latency_ms, mos_score, status)\n- [ ] Create continuous aggregates for 1-hour and 1-day rollups (avg latency, success rate, throughput)\n- [ ] Configure TimescaleDB data retention policy: drop raw events older than 90 days, keep continuous aggregates indefinitely\n\n### Acceptance Criteria\n- [ ] Hypertables created and partitioned by time chunks\n- [ ] Continuous aggregates refresh automatically on new data\n- [ ] Retention policy active and verified\n\n### Dependencies & Technical Notes\n- TimescaleDB 2.x\n- Estimated Effort: 2 days",
                     "type": "type:feature",
-                    "priority": "priority:medium"
+                    "priority": "priority:high",
+                    "phase": "phase-2"
+                },
+                {
+                    "title": "Implement Kafka multi-topic event consumer & high-throughput batch ingestion",
+                    "description": "### Context & Objective\nBuild an efficient event ingestion pipeline that subscribes to all system events and writes batched records into TimescaleDB with high throughput.\n\n### Technical Tasks\n- [ ] Implement Kafka consumer subscribing to topics: `user.*`, `script.*`, `voice.*`, `media.*`, `asset.*`, `subscription.*`\n- [ ] Build in-memory batch buffer collecting events (batch size: 500 records or 1 second flush interval)\n- [ ] Implement bulk insert queries using `asyncpg.copy_records_to_table` for maximum write throughput\n- [ ] Handle malformed events with dead-letter queue logging without crashing consumer\n\n### Acceptance Criteria\n- [ ] Ingestion pipeline processes up to 1,000 events/sec without backpressure\n- [ ] Events accurately stored with proper timestamp, service origin, and dimensions\n- [ ] Consumer recovers cleanly from network interruptions\n\n### Dependencies & Technical Notes\n- aiokafka, asyncpg\n- Estimated Effort: 2 - 2.5 days",
+                    "type": "type:feature",
+                    "priority": "priority:high",
+                    "phase": "phase-2"
+                },
+                {
+                    "title": "Implement real-time KPI metrics aggregation & Redis caching layer",
+                    "description": "### Context & Objective\nCompute core platform KPIs (generation latency SLA, script success rate, voice MOS score, active creators) and cache in Redis for rapid dashboard delivery.\n\n### Technical Tasks\n- [ ] Implement aggregation engine calculating:\n  - End-to-end video generation latency (PRD SLA target: <2 minutes)\n  - Script success rate (PRD SLA target: >95%)\n  - Average voice quality MOS score (target: >4.0)\n  - Daily/monthly active creators and generated video volume\n- [ ] Cache aggregated metrics in Redis under `analytics:kpi:overview` (TTL: 60 seconds)\n- [ ] Build background worker refreshing cache periodically\n\n### Acceptance Criteria\n- [ ] Core KPIs computed accurately against continuous aggregate views\n- [ ] Redis cache serves dashboard KPI queries in <20ms\n- [ ] Alerts logged when latency SLA (<2 min) or success rate (>95%) is breached\n\n### Dependencies & Technical Notes\n- PRD Section 9 Non-Functional Requirements\n- Estimated Effort: 2 days",
+                    "type": "type:feature",
+                    "priority": "priority:medium",
+                    "phase": "phase-2"
+                },
+                {
+                    "title": "Implement analytics REST API endpoints for user & system dashboards",
+                    "description": "### Context & Objective\nProvide secure REST API endpoints for querying platform performance, latency breakdowns, and individual creator activity trends.\n\n### Technical Tasks\n- [ ] Implement endpoints in `src/api/v1/endpoints/analytics.py`:\n  - `GET /api/v1/analytics/overview` - System-level KPIs (latency, success rate, total assets)\n  - `GET /api/v1/analytics/latency` - Granular latency breakdown by microservice\n  - `GET /api/v1/analytics/users/{userId}/activity` - User generation count and monthly minutes\n  - `GET /api/v1/analytics/quality` - MOS score distribution across voice providers\n- [ ] Implement date-range filtering, granularity params (`1h`, `1d`, `1w`), and Pydantic validation schemas\n\n### Acceptance Criteria\n- [ ] Endpoints return time-series data formatted for charting libraries\n- [ ] Query responses return within 100ms under load\n- [ ] Pydantic schemas validate query parameters and handle edge cases\n\n### Dependencies & Technical Notes\n- FastAPI, Pydantic v2\n- Estimated Effort: 2 days",
+                    "type": "type:feature",
+                    "priority": "priority:medium",
+                    "phase": "phase-2"
+                },
+                {
+                    "title": "Implement Pytest test suite with simulated Kafka event streams & TimescaleDB fixtures",
+                    "description": "### Context & Objective\nEnsure measurement accuracy, hypertable aggregation correctness, and API query performance through automated test suites.\n\n### Technical Tasks\n- [ ] Setup `pytest` with `pytest-asyncio` and TimescaleDB test database fixtures\n- [ ] Build event stream simulator publishing mock lifecycle events\n- [ ] Write test cases for:\n  - Batch ingestion throughput and deduplication\n  - Continuous aggregate calculation accuracy\n  - SLA breach detection logic\n  - Analytics REST API query parameters\n- [ ] Verify test suite reaches >80% code coverage\n\n### Acceptance Criteria\n- [ ] `pytest tests/` runs cleanly with >80% coverage\n- [ ] Continuous aggregates verified against raw event calculations\n- [ ] CI pipeline validates test suite on every PR\n\n### Dependencies & Technical Notes\n- Pytest, pytest-asyncio\n- Estimated Effort: 1.5 - 2 days",
+                    "type": "type:testing",
+                    "priority": "priority:medium",
+                    "phase": "phase-2"
                 }
             ]
         },
@@ -200,16 +429,46 @@
             "phase": "phase-1",
             "issues": [
                 {
-                    "title": "Setup Express.js with Bull queue & email integration",
-                    "description": "- Initialize Node.js project with TypeScript configuration\n- Setup Bull queue for job scheduling (backed by Redis)\n- Configure SendGrid API for email delivery\n- Create PostgreSQL models for notification tracking\n- Setup Kafka consumer for event listening\n- Implement email templates (Handlebars)\n- Create Dockerfile and docker-compose.yml",
+                    "title": "Setup Express.js TypeScript scaffolding with Bull queue, Redis & Docker",
+                    "description": "### Context & Objective\nScaffold the Node.js TypeScript project for Notification-Service, integrating Bull queue for background processing and Redis connection pooling.\n\n### Technical Tasks\n- [ ] Initialize Express TypeScript project with Vitest, ESLint, Prettier, and Winston logging\n- [ ] Setup Bull queue client backed by Redis with concurrency limits and worker pools\n- [ ] Configure SendGrid API client with credentials from environment variables\n- [ ] Create multi-stage `Dockerfile` and `docker-compose.yml` with PostgreSQL 15 and Redis 7\n- [ ] Implement `/health` endpoint checking DB, Redis, and Bull queue readiness\n\n### Acceptance Criteria\n- [ ] Service compiles cleanly via `npm run build`\n- [ ] Bull queue connects to Redis and processes test job\n- [ ] `GET /health` returns HTTP 200 with queue status\n\n### Dependencies & Technical Notes\n- Node.js 20+, Express, TypeScript, Bull Queue, Redis 7\n- Estimated Effort: 1.5 - 2 days",
                     "type": "type:setup",
-                    "priority": "priority:high"
+                    "priority": "priority:high",
+                    "phase": "phase-1"
                 },
                 {
-                    "title": "Implement event-driven notifications & webhooks",
-                    "description": "- Create notification endpoint: POST /api/notifications/send\n- Implement Kafka consumer to listen for 'asset.compiled' events\n- Queue emails via Bull with retry logic (exponential backoff)\n- Integrate SendGrid for reliable email delivery\n- Implement webhook event delivery for completed videos\n- Add notification status tracking & delivery logs\n- Create unit tests for queue processing",
+                    "title": "Implement database schema & migrations for notifications, email templates & webhooks",
+                    "description": "### Context & Objective\nEstablish persistent storage for notification delivery logs, email template versions, and registered user webhook subscriptions.\n\n### Technical Tasks\n- [ ] Write SQL migrations for:\n  - `notifications` (id, user_id, channel [EMAIL/WEBHOOK], template_id, recipient, status [QUEUED/SENT/FAILED], payload, error_message, sent_at, created_at)\n  - `email_templates` (id, slug, name, subject, body_html, version, active)\n  - `webhook_subscriptions` (id, user_id, target_url, secret_token, events_filter, active, created_at)\n- [ ] Setup `pg.Pool` connection and repository CRUD methods for notifications and subscriptions\n- [ ] Add indexes on `user_id`, `status`, and `created_at`\n\n### Acceptance Criteria\n- [ ] Migrations apply cleanly on empty database\n- [ ] Repository records delivery attempts and status transitions\n- [ ] Webhook subscription CRUD operations verified with tests\n\n### Dependencies & Technical Notes\n- Follow Repository pattern from CLAUDE.md\n- Estimated Effort: 2 days",
                     "type": "type:feature",
-                    "priority": "priority:high"
+                    "priority": "priority:high",
+                    "phase": "phase-1"
+                },
+                {
+                    "title": "Implement Kafka consumer for system events & Bull queue notification dispatcher",
+                    "description": "### Context & Objective\nListen for domain events over Kafka (`asset.compiled`, `asset.failed`, `quota.warning`) and dispatch corresponding background notification jobs into Bull queue.\n\n### Technical Tasks\n- [ ] Configure `kafkajs` consumer subscribing to topics: `asset.compiled`, `asset.failed`, `quota.warning`, `user.registered`\n- [ ] Build `NotificationDispatcher` mapping domain events to target channels:\n  - `asset.compiled` -> Email (Video Ready) + Webhook\n  - `asset.failed` -> Email (Generation Error)\n  - `quota.warning` -> Email (Quota Limit Reached)\n- [ ] Enqueue notification jobs into Bull queue with priority levels and exponential backoff retry configuration\n- [ ] Implement deduplication check to prevent duplicate emails for identical event IDs\n\n### Acceptance Criteria\n- [ ] Kafka events immediately parsed and enqueued into Bull queue (<50ms)\n- [ ] Duplicate events ignored safely\n- [ ] Consumer handles broker reconnection cleanly\n\n### Dependencies & Technical Notes\n- Kafka 3.x, Bull Queue, Redis\n- Estimated Effort: 2 days",
+                    "type": "type:feature",
+                    "priority": "priority:high",
+                    "phase": "phase-1"
+                },
+                {
+                    "title": "Implement SendGrid email delivery worker with responsive Handlebars templates",
+                    "description": "### Context & Objective\nBuild the transactional email delivery engine using SendGrid and responsive Handlebars HTML templates for key creator notifications.\n\n### Technical Tasks\n- [ ] Create responsive HTML email templates using Handlebars:\n  - `welcome.hbs`: Onboarding guide and quick-start link\n  - `video-ready.hbs`: Video title, preview thumbnail, download link, and creation stats\n  - `generation-failed.hbs`: Helpful error explanation and retry action\n  - `quota-alert.hbs`: Quota usage alert and plan upgrade link\n- [ ] Implement Bull queue email worker consuming queued email jobs\n- [ ] Deliver emails via SendGrid SDK with rate limiting and exponential backoff (3 attempts)\n- [ ] Update notification record status to `SENT` or `FAILED` with timestamps\n\n### Acceptance Criteria\n- [ ] Emails render properly across major email clients (desktop and mobile)\n- [ ] SendGrid API errors trigger automated retries before marking failed\n- [ ] Sent emails logged with recipient and delivery timestamps in `notifications` table\n\n### Dependencies & Technical Notes\n- SendGrid API, Handlebars\n- Estimated Effort: 2 - 2.5 days",
+                    "type": "type:feature",
+                    "priority": "priority:high",
+                    "phase": "phase-1"
+                },
+                {
+                    "title": "Implement webhook delivery worker with HMAC-SHA256 signatures & retry policy",
+                    "description": "### Context & Objective\nProvide secure webhook event delivery to third-party endpoints for creators automating their workflows, with cryptographic HMAC signing.\n\n### Technical Tasks\n- [ ] Build webhook delivery worker consuming Bull queue webhook jobs\n- [ ] Generate HMAC-SHA256 signature (`X-Klyptr-Signature: sha256=...`) computed with user's secret token\n- [ ] Implement HTTP POST delivery using `axios` with 5-second timeout\n- [ ] Implement exponential backoff retry policy (5 retries: 1m, 5m, 15m, 1h, 6h) for transient HTTP 5xx or timeout errors\n- [ ] Provide REST endpoints for managing webhooks: `POST /api/v1/webhooks`, `GET /api/v1/webhooks`, `DELETE /api/v1/webhooks/:id`\n\n### Acceptance Criteria\n- [ ] Webhook payloads delivered with valid HMAC-SHA256 signature in headers\n- [ ] Non-2xx responses trigger scheduled retries according to backoff schedule\n- [ ] Webhook management endpoints validate target URLs and generate secret tokens\n\n### Dependencies & Technical Notes\n- Axios, Crypto, Bull Queue\n- Estimated Effort: 2 days",
+                    "type": "type:feature",
+                    "priority": "priority:high",
+                    "phase": "phase-1"
+                },
+                {
+                    "title": "Implement Vitest test suite with Bull queue mocks & SendGrid mock fixtures",
+                    "description": "### Context & Objective\nEnsure reliability, template rendering fidelity, and webhook signing correctness with automated Vitest integration test suites.\n\n### Technical Tasks\n- [ ] Setup Vitest with Supertest and mocked SendGrid and HTTP adapters\n- [ ] Write unit tests for:\n  - Handlebars template compilation and variable injection\n  - HMAC-SHA256 signature generation and verification\n  - Event-to-notification mapping logic\n- [ ] Write integration tests for:\n  - Bull queue job lifecycle (enqueue, process, fail, retry)\n  - Webhook delivery worker retry behavior on HTTP 500\n- [ ] Verify test suite achieves >80% line and branch coverage\n\n### Acceptance Criteria\n- [ ] `npm test` executes cleanly without real SendGrid API calls\n- [ ] All external network requests mocked\n- [ ] Code coverage exceeds 80%\n\n### Dependencies & Technical Notes\n- Vitest, Supertest\n- Estimated Effort: 1.5 - 2 days",
+                    "type": "type:testing",
+                    "priority": "priority:medium",
+                    "phase": "phase-1"
                 }
             ]
         }

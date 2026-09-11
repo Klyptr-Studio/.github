@@ -275,7 +275,7 @@ function createIssuesForService(org, service, labels, stats) {
         try {
             // Build labels array
             const issueLabels = [
-                service.phase,
+                issue.phase || service.phase,
                 issue.type,
                 issue.priority,
             ].filter(Boolean);
