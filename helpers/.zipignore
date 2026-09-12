@@ -1,0 +1,9 @@
+*/node_modules/*
+*.pyc
+*.log
+*/target/*
+*/.venv/*
+*/.idea/*
+*/.vscode/*
+*/.DS_Store
+*/.git/*
