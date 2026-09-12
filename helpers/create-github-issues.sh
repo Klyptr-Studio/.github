@@ -15,7 +15,7 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m'
 
-CONFIG_FILE="${1:-services-config.json}"
+CONFIG_FILE="${1:-../data/services-config.json}"
 LOG_FILE="github-issues-creation-$(date +%Y%m%d-%H%M%S).log"
 
 log_info() {
