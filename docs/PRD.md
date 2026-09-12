@@ -49,6 +49,8 @@
 
 ## 5. Microservices & Tech Stack
 
+### Backend Services (14 Services)
+
 | Service | Purpose | Language | DB | Cache | Queue |
 |---------|---------|----------|-----|-------|-------|
 | **User Service** | Auth, profiles, subscriptions | Java 21/Spring Boot | PostgreSQL | Redis | — |
@@ -59,12 +61,38 @@
 | **Subscription Service** | Usage tracking, quotas, billing | Python/FastAPI | PostgreSQL | Redis | — |
 | **Analytics Service** | Metrics, user activity | Python/FastAPI | TimescaleDB | — | Kafka |
 | **Notification Service** | Email, webhooks, alerts | TypeScript/Node.js | PostgreSQL | — | Bull Queue |
+| **API Gateway Service** | Request routing, rate limiting, auditing | Java 21/Spring Boot | PostgreSQL | Redis | Kafka |
+| **Configuration Service** | Feature flags, dynamic config management | Java 21/Spring Boot | PostgreSQL | Redis | Kafka |
+| **File Storage Service** | S3 abstraction, quota enforcement | Java 21/Spring Boot | PostgreSQL | Redis | — |
+| **Job Queue Service** | Centralized async job processing | TypeScript/Node.js | PostgreSQL | Redis | Kafka |
+| **Audit Service** | Compliance logging, audit trails | Python/FastAPI | PostgreSQL | — | Kafka |
+| **Search Service** | Full-text search, Elasticsearch | TypeScript/Node.js | Elasticsearch | Redis | Kafka |
+
+### Frontend Services (2 Services)
+
+| Service | Purpose | Technology |
+|---------|---------|-----------|
+| **Creator Studio** | User-facing app for video generation | React 18, Vite, TypeScript, Tailwind |
+| **Admin Dashboard** | Internal platform for operations | Next.js 14, TypeScript, Tailwind |
 
 **Frontend:** React 18 + Vite (TypeScript) | **API Gateway:** Kong | **Monitoring:** Prometheus + Grafana
 
 ---
 
-## 6. System Architecture Diagram
+## 6. System Architecture
+
+Klyptr Studio employs a **14-service microservices architecture** (8 domain services + 6 infrastructure services + 2 frontend services) orchestrated around **Apache Kafka** event choreography:
+
+- **API Gateway Service:** Single entry point, JWT validation, rate limiting
+- **Configuration Service:** Real-time feature flags & dynamic configuration via Kafka
+- **File Storage Service:** Centralized S3 abstraction with quota enforcement
+- **Job Queue Service:** Unified async processing (replaces embedded Bull Queue in Notification Service)
+- **Audit Service:** Event-driven compliance logging via Kafka
+- **Search Service:** Full-text search via Elasticsearch
+
+Each service maintains domain isolation with PostgreSQL (or specialized stores like TimescaleDB, Elasticsearch) and Redis caching.
+
+### System Architecture Diagram
 
 ![](./.assets/Architecture.jpg)
 
@@ -87,10 +115,10 @@
 
 | Phase | Timeline | Key Deliverables | Success Metrics |
 |-------|----------|------------------|-----------------|
-| **Phase 1: MVP** | Months 1-3 | User, Script, Voice, Web UI, Basic Export | 50 users, 1K videos |
-| **Phase 2: Polish & Launch** | Months 4-5 | Media Service, Asset Manager, Analytics, Voice Clone | 500 users, subscription tier |
-| **Phase 3: Growth** | Months 6-9 | White-label API, Template Marketplace, Team Features | 5K users, $50K MRR |
-| **Phase 4: Enterprise** | Months 10-12 | K8s deployment, SLA, Enterprise support | 50K users, enterprise revenue |
+| **Phase 1: MVP & Infrastructure** | Months 1-4 | 8 Domain Services, 6 Infrastructure Services, Creator Studio, Admin Dashboard | 50 pilot users, 1K videos |
+| **Phase 2: Service Migrations & Polish** | Months 5-6 | Configuration-Service integration, S3→File-Storage migration, Bull→Job-Queue migration, Public Launch | 500 users, subscription tier, public launch |
+| **Phase 3: Growth & Features** | Months 7-9 | Voice Cloning enhancement, Template Marketplace, Team Brand Kits, Social Auto-Publishing | 5K users, $50K MRR |
+| **Phase 4: Enterprise Scale** | Months 10-12 | Multi-Region Kubernetes, White-Label SDK, 99.99% SLA, Enterprise support | 50K users, enterprise revenue |
 
 ---
 

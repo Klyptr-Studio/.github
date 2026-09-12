@@ -34,7 +34,7 @@ Creators enjoy full hybrid flexibility:
 
 ## System Architecture & Data Flow
 
-Klyptr Studio is architected around an **event-driven choreography pattern** powered by **Apache Kafka**, with high-performance edge routing via **Kong API Gateway** and a unified multi-tier caching layer (Redis L2 + PostgreSQL persistent storage).
+Klyptr Studio is architected around an **event-driven choreography pattern** powered by **Apache Kafka**, with **14 specialized microservices** orchestrated via API Gateway Service for routing, Configuration Service for real-time dynamic config, and a unified multi-tier caching layer (Redis L2 + PostgreSQL persistent storage). Infrastructure services provide cross-cutting concerns: centralized file storage, async job processing, audit logging, and full-text search.
 
 <img src="./.assets/DataFlow.png" />
 
@@ -43,6 +43,8 @@ Klyptr Studio is architected around an **event-driven choreography pattern** pow
 ## Microservices Ecosystem
 
 Every service is developed following domain-driven design, equipped with its own containerized PostgreSQL instance, Redis cache, isolated integration tests, and multi-stage Docker build pipeline:
+
+### Backend Services (14 Services)
 
 | Service | Responsibility | Technology Stack | Primary Data Store | Cache & Queue |
 | :--- | :--- | :--- | :--- | :--- |
@@ -54,6 +56,19 @@ Every service is developed following domain-driven design, equipped with its own
 | **[`Subscription-Service`](https://github.com/Klyptr-Studio/Subscription-Service)**| Stripe webhook automation, plan quotas & usage guardrails | `Python 3.11` `FastAPI` | PostgreSQL 15 | Redis 7 |
 | **[`Analytics-Service`](https://github.com/Klyptr-Studio/Analytics-Service)** | Time-series ingestion, user retention & generation latency | `Python 3.11` `FastAPI` | TimescaleDB | Redis 7 • Kafka |
 | **[`Notification-Service`](https://github.com/Klyptr-Studio/Notification-Service)**| Real-time push, async job queues & transactional emails | `TypeScript` `Node.js` `SendGrid`| PostgreSQL 15 | Bull Queue • Redis |
+| **[`API-Gateway-Service`](https://github.com/Klyptr-Studio/API-Gateway-Service)** | Request routing, JWT validation, rate limiting, request auditing | `Java 21` `Spring Boot 3` | PostgreSQL 15 | Redis 7 • Kafka |
+| **[`Configuration-Service`](https://github.com/Klyptr-Studio/Configuration-Service)** | Feature flags, rate limits, quotas, real-time dynamic config updates | `Java 21` `Spring Boot 3` | PostgreSQL 15 | Redis 7 • Kafka |
+| **[`File-Storage-Service`](https://github.com/Klyptr-Studio/File-Storage-Service)** | S3 abstraction layer, quota enforcement, presigned URLs, file lifecycle | `Java 21` `Spring Boot 3` | PostgreSQL 15 | Redis 7 |
+| **[`Job-Queue-Service`](https://github.com/Klyptr-Studio/Job-Queue-Service)** | Centralized async job processing (video generation, email, bulk ops) | `TypeScript` `Node.js` | PostgreSQL 15 | Redis 7 • Kafka |
+| **[`Audit-Service`](https://github.com/Klyptr-Studio/Audit-Service)** | Event-driven compliance logging, audit trail, exports | `Python 3.11` `FastAPI` | PostgreSQL 15 | Kafka |
+| **[`Search-Service`](https://github.com/Klyptr-Studio/Search-Service)** | Full-text search, Elasticsearch integration, autocomplete | `TypeScript` `Node.js` | Elasticsearch | Redis 7 • Kafka |
+
+### Frontend Services (2 Services - Phase 1)
+
+| Service | Purpose | Technology Stack | Users |
+| :--- | :--- | :--- | :--- |
+| **[`Creator-Studio`](https://github.com/Klyptr-Studio/Creator-Studio)** | User-facing web app for video generation, project management, asset library | `React 18` `Vite` `TypeScript` `Tailwind CSS` | Content Creators |
+| **[`Admin-Dashboard`](https://github.com/Klyptr-Studio/Admin-Dashboard)** | Internal platform for metrics, user management, system monitoring, logs | `Next.js 14` `TypeScript` `Tailwind CSS` | Internal Team |
 
 ---
 
@@ -61,9 +76,9 @@ Every service is developed following domain-driven design, equipped with its own
 
 ```mermaid
 flowchart LR
-    P1["🚀 Phase 1: MVP \n (Months 1-3)\n• Core Microservices\n• Script & Voice Pipeline\n• Web Studio Dashboard\n• 50 Pilot Creators"] 
-    --> P2["💎 Phase 2: Polish & Launch \n (Months 4-5)\n• Media & Asset Manager\n• Voice Cloning Module\n• TimescaleDB Analytics\n• Public Tier Launch"]
-    --> P3["📈 Phase 3: Growth \n (Months 6-9)\n• Creator Marketplace\n• Team Brand Kits\n• Social Auto-Publishing\n• 5,000+ Active Users"]
+    P1["🚀 Phase 1: MVP & Infrastructure \n (Months 1-4)\n• 8 Domain Microservices\n• 6 Infrastructure Services\n• Script & Voice Pipeline\n• Creator Studio & Admin Dashboard\n• 50 Pilot Creators"] 
+    --> P2["💎 Phase 2: Polish & Launch \n (Months 5-6)\n• Service Migrations\n• Voice Cloning Module\n• Subscription Tiers\n• Public Launch"]
+    --> P3["📈 Phase 3: Growth \n (Months 7-9)\n• Creator Marketplace\n• Team Brand Kits\n• Social Auto-Publishing\n• 5,000+ Active Users"]
     --> P4["🏢 Phase 4: Enterprise \n (Months 10-12)\n• Multi-Region Kubernetes\n• White-Label REST SDK\n• 99.99% Enterprise SLA\n• Custom LLM Fine-Tuning"]
     
     style P1 fill:#eef2ff,stroke:#6366f1,stroke-width:2px;
